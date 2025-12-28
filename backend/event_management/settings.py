@@ -4,6 +4,7 @@ Django settings for event_management project.
 
 from pathlib import Path
 from datetime import timedelta
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -124,3 +125,8 @@ EMAIL_HOST_USER = 'tnihad257@gmail.com'
 EMAIL_HOST_PASSWORD = 'zzzv msti nuyr trak'
 
 DEFAULT_FROM_EMAIL = f'Event System <{EMAIL_HOST_USER}>'
+
+
+MEDIA_URL = '/media/' 
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media') #
