@@ -13,9 +13,7 @@ SECRET_KEY = 'django-insecure-=z(hqedy8ctol!1!72+_*0^kb@decfs9)_s^k&x#xib0$(1@h$
 DEBUG = True
 ALLOWED_HOSTS = []
 
-# --------------------------
-# Application definition
-# --------------------------
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -58,9 +56,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'event_management.wsgi.application'
 
-# --------------------------
-# Database
-# --------------------------
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -68,12 +64,10 @@ DATABASES = {
     }
 }
 
-# Custom User Model
+
 AUTH_USER_MODEL = 'event_app.CustomUser'
 
-# --------------------------
-# Password validation
-# --------------------------
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
@@ -81,24 +75,18 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
-# --------------------------
-# Internationalization
-# --------------------------
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# --------------------------
-# Static files
-# --------------------------
+
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'event_app' / 'static']
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --------------------------
-# Django REST Framework & JWT
-# --------------------------
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -112,15 +100,12 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-# --------------------------
-# Email configuration (real Gmail SMTP)
-# --------------------------
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-# Buraya Gmail hesabın və App Password daxil et
 EMAIL_HOST_USER = 'tnihad257@gmail.com'
 EMAIL_HOST_PASSWORD = 'zzzv msti nuyr trak'
 
