@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     RegisterAPI, VerifyOTPAPI, LoginAPI, LogoutAPI,
@@ -18,8 +18,13 @@ urlpatterns = [
 
 
 router = DefaultRouter()
-router.register(r'roles', RoleViewSet)
-router.register(r'events', EventViewSet)
-router.register(r'event-images', EventImageViewSet)
+router.register(r'roles', RoleViewSet, basename='roles')
+router.register(r'events', EventViewSet, basename='events')
+router.register(r'event-images', EventImageViewSet, basename='event-images')
 
-urlpatterns += router.urls
+
+urlpatterns += [
+    path('', include(router.urls)),
+]
+
+

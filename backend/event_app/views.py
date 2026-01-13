@@ -1,18 +1,24 @@
-from rest_framework.views import APIView
+from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.decorators import action
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate, logout as django_logout
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-import random
-
-from .models import CustomUser, Role, Event, EventImage
+import random, uuid
+from .models import (
+    CustomUser, Role, Event, EventImage,
+    EventAllowedEmail, EventRegistration,
+    EventAgenda, EventAccessToken
+)
 from .serializers import (
     RegisterSerializer, VerifyOTPSerializer, LoginSerializer,
     ForgotPasswordSerializer, ResetPasswordSerializer,
-    RoleSerializer, EventSerializer, EventImageSerializer
+    RoleSerializer, EventSerializer, EventImageSerializer,
+    EventAllowedEmailSerializer, EventRegistrationSerializer,
+    EventAgendaSerializer, EventAccessTokenSerializer
 )
 
 
@@ -29,7 +35,6 @@ class RegisterAPI(APIView):
             user.otp = str(random.randint(100000, 999999))
             user.otp_created_at = timezone.now()
             user.save()
-
             send_mail(
                 subject="OTP Verification",
                 message=f"Your OTP code is {user.otp}",
@@ -47,7 +52,6 @@ class VerifyOTPAPI(APIView):
                 user = CustomUser.objects.get(email=serializer.validated_data["email"])
             except CustomUser.DoesNotExist:
                 return Response({"error": "User not found"}, status=404)
-
             if user.otp == serializer.validated_data["otp"] and user.otp_is_valid():
                 user.is_active = True
                 user.otp = None
@@ -74,7 +78,6 @@ class LoginAPI(APIView):
 
 class LogoutAPI(APIView):
     permission_classes = [IsAuthenticated]
-
     def post(self, request):
         django_logout(request)
         return Response({"message": "Logged out successfully"})
@@ -107,10 +110,8 @@ class ResetPasswordAPI(APIView):
                 user = CustomUser.objects.get(email=serializer.validated_data["email"])
             except CustomUser.DoesNotExist:
                 return Response({"error": "User not found"}, status=404)
-
             if user.otp != serializer.validated_data["otp"] or not user.otp_is_valid():
                 return Response({"error": "Invalid or expired OTP"}, status=400)
-
             user.set_password(serializer.validated_data["new_password"])
             user.otp = None
             user.otp_created_at = None
@@ -119,15 +120,59 @@ class ResetPasswordAPI(APIView):
         return Response(serializer.errors, status=400)
 
 
+class CanViewEvent(BasePermission):
+    """
+    Checks if a user can view the event:
+    - Public events → anyone
+    - Private events → must have role or be in allowed_emails
+    """
+    def has_object_permission(self, request, view, obj):
+        if obj.visibility == 'public':
+            return True
+        if request.user.is_authenticated:
+            user_roles = request.user.roles.all()
+            if obj.allowed_roles.filter(id__in=user_roles).exists():
+                return True
+        
+        email = request.user.email if request.user.is_authenticated else request.query_params.get('email')
+        token = request.query_params.get('token')
+        if token:
+            try:
+                t = EventAccessToken.objects.get(token=token, event=obj)
+                return t.is_valid() and t.email == email
+            except EventAccessToken.DoesNotExist:
+                return False
+        if email:
+            return obj.allowed_emails.filter(email=email).exists()
+        return False
+
+
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     permission_classes = [IsAuthenticated]
 
+
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanViewEvent]
+
+    
+    @action(detail=True, methods=['post'])
+    def register(self, request, pk=None):
+        event = self.get_object()
+        email = request.data.get('email')
+        user = request.user if request.user.is_authenticated else None
+        if not email and not user:
+            return Response({"error": "Email required for registration"}, status=400)
+        if not email:
+            email = user.email
+        reg, created = EventRegistration.objects.get_or_create(event=event, email=email, defaults={'user': user})
+        if not created:
+            return Response({"message": "Already registered"}, status=200)
+        return Response({"message": "Registered successfully"}, status=201)
+
 
 class EventImageViewSet(viewsets.ModelViewSet):
     queryset = EventImage.objects.all()
