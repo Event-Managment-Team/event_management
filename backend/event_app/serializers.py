@@ -1,12 +1,8 @@
 from rest_framework import serializers
-from django.utils import timezone
 from .models import (
     CustomUser, Role, Event, EventImage,
-    EventAllowedEmail, EventRegistration,
-    EventAgenda, EventAccessToken
 )
 from django.contrib.auth.password_validation import validate_password
-
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -30,7 +26,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    otp = serializers.CharField(max_length=6)
+    otp = serializers.CharField(max_length=6, min_length=6)
 
 
 class LoginSerializer(serializers.Serializer):
@@ -44,9 +40,8 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    otp = serializers.CharField(max_length=6)
-    new_password = serializers.CharField(write_only=True)
-
+    otp = serializers.CharField(max_length=6, min_length=6)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -55,55 +50,27 @@ class RoleSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-
-class EventAllowedEmailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EventAllowedEmail
-        fields = ['id', 'email', 'group_name']
-
-
-class EventRegistrationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EventRegistration
-        fields = ['id', 'email', 'status', 'registered_at']
-
-
-class EventAgendaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EventAgenda
-        fields = ['id', 'title', 'start_time', 'end_time', 'speaker']
-
-
-class EventAccessTokenSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EventAccessToken
-        fields = ['id', 'email', 'token', 'expires_at']
-
-
 class EventImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventImage
-        fields = '__all__'
+        fields = ['id', 'event', 'image', 'uploaded_at']
+        read_only_fields = ['uploaded_at']
 
 
 class EventSerializer(serializers.ModelSerializer):
     allowed_roles = RoleSerializer(many=True, read_only=True)
     allowed_roles_ids = serializers.PrimaryKeyRelatedField(
-        queryset=Role.objects.all(), many=True, write_only=True, source='allowed_roles'
+        queryset=Role.objects.all(), many=True, write_only=True, source='allowed_roles',
+        required=False
     )
-
-    allowed_emails = EventAllowedEmailSerializer(many=True, read_only=True)
-    agenda_items = EventAgendaSerializer(many=True, read_only=True)
-    registrations = EventRegistrationSerializer(many=True, read_only=True)
     images = EventImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Event
         fields = [
             'id', 'title', 'desc', 'type', 'visibility', 'created_by',
-            'allowed_roles', 'allowed_roles_ids', 'allowed_emails',
-            'agenda_items', 'registrations', 'images',
+            'allowed_roles', 'allowed_roles_ids', 'images', 'agenda',
             'date', 'created_date', 'expired_date', 'participant_count',
             'max_participants'
         ]
-        read_only_fields = ['created_by', 'participant_count']
+        read_only_fields = ['created_by', 'created_date', 'participant_count']

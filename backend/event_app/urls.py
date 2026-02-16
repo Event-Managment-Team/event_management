@@ -6,6 +6,10 @@ from .views import (
     RoleViewSet, EventViewSet, EventImageViewSet
 )
 
+router = DefaultRouter()
+router.register(r'roles', RoleViewSet, basename='roles')
+router.register(r'events', EventViewSet, basename='events')
+router.register(r'event-images', EventImageViewSet, basename='event-images')
 
 urlpatterns = [
     path('api/register/', RegisterAPI.as_view(), name='api_register'),
@@ -14,17 +18,7 @@ urlpatterns = [
     path('api/logout/', LogoutAPI.as_view(), name='api_logout'),
     path('api/forgot-password/', ForgotPasswordAPI.as_view(), name='api_forgot_password'),
     path('api/reset-password/', ResetPasswordAPI.as_view(), name='api_reset_password'),
-]
-
-
-router = DefaultRouter()
-router.register(r'roles', RoleViewSet, basename='roles')
-router.register(r'events', EventViewSet, basename='events')
-router.register(r'event-images', EventImageViewSet, basename='event-images')
-
-
-urlpatterns += [
-    path('', include(router.urls)),
+    path('api/', include(router.urls)),
 ]
 
 
