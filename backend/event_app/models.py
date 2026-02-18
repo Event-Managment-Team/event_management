@@ -20,6 +20,7 @@ class CustomUser(AbstractUser):
 
     def otp_is_valid(self):
         if self.otp_created_at:
+           
             return (timezone.now() - self.otp_created_at).seconds < 300
         return False
 
@@ -38,6 +39,12 @@ class Event(models.Model):
 
     title = models.CharField(max_length=255)
     desc = models.TextField()
+    
+    
+    building = models.CharField(max_length=100, blank=True, null=True, help_text="Məsələn: Əsas korpus")
+    floor = models.IntegerField(blank=True, null=True)
+    room = models.CharField(max_length=50, blank=True, null=True, help_text="Məsələn: 302 və ya Akt zalı")
+    organizer_side = models.CharField(max_length=255, blank=True, null=True, help_text="Tədbiri keçirən tərəf")
 
     type = models.CharField(max_length=20, choices=EVENT_TYPES)
     visibility = models.CharField(max_length=10, choices=VISIBILITY, default='public')
@@ -45,18 +52,43 @@ class Event(models.Model):
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='created_events')
     allowed_roles = models.ManyToManyField(Role, related_name='events', blank=True)
 
-    agenda = models.TextField(blank=True, null=True)
-    date = models.DateTimeField()
+    start_date = models.DateTimeField() 
+    end_date = models.DateTimeField(blank=True, null=True) 
     created_date = models.DateTimeField(auto_now_add=True)
-    expired_date = models.DateTimeField(blank=True, null=True)
+    
     participant_count = models.PositiveIntegerField(default=0)
     max_participants = models.PositiveIntegerField(null=True, blank=True)
 
     def is_expired(self):
-        return self.expired_date and timezone.now() > self.expired_date
+        return self.end_date and timezone.now() > self.end_date
 
     def __str__(self):
         return self.title
+
+
+class EventAgenda(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='agendas')
+    time_slot = models.TimeField(help_text="Fəaliyyətin başlama saatı")
+    action = models.CharField(max_length=255, help_text="Məsələn: Açılış nitqi və ya Coffee Break")
+
+    class Meta:
+        ordering = ['time_slot']
+
+    def __str__(self):
+        return f"{self.time_slot} - {self.action}"
+
+
+class AllowedParticipant(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='allowed_participants')
+    email = models.EmailField()
+    group_name = models.CharField(max_length=100, blank=True, null=True, help_text="Könüllü: Qrup adı (məsələn, 601.21)")
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('event', 'email')
+
+    def __str__(self):
+        return f"{self.email} -> {self.event.title}"
 
 
 class EventImage(models.Model):

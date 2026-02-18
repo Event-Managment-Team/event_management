@@ -1,9 +1,8 @@
 from rest_framework import serializers
 from .models import (
-    CustomUser, Role, Event, EventImage,
+    CustomUser, Role, Event, EventImage, EventAgenda, AllowedParticipant
 )
 from django.contrib.auth.password_validation import validate_password
-
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -23,32 +22,26 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6, min_length=6)
-
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
-
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
-
 
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6, min_length=6)
     new_password = serializers.CharField(write_only=True, validators=[validate_password])
 
-
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = '__all__'
-
 
 class EventImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -57,6 +50,11 @@ class EventImageSerializer(serializers.ModelSerializer):
         read_only_fields = ['uploaded_at']
 
 
+class EventAgendaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventAgenda
+        fields = ['time_slot', 'action']
+
 class EventSerializer(serializers.ModelSerializer):
     allowed_roles = RoleSerializer(many=True, read_only=True)
     allowed_roles_ids = serializers.PrimaryKeyRelatedField(
@@ -64,13 +62,15 @@ class EventSerializer(serializers.ModelSerializer):
         required=False
     )
     images = EventImageSerializer(many=True, read_only=True)
+    agendas = EventAgendaSerializer(many=True, read_only=True) 
 
     class Meta:
         model = Event
         fields = [
             'id', 'title', 'desc', 'type', 'visibility', 'created_by',
-            'allowed_roles', 'allowed_roles_ids', 'images', 'agenda',
-            'date', 'created_date', 'expired_date', 'participant_count',
+            'building', 'floor', 'room', 'organizer_side',
+            'allowed_roles', 'allowed_roles_ids', 'images', 'agendas',
+            'start_date', 'end_date', 'created_date', 'participant_count',
             'max_participants'
         ]
         read_only_fields = ['created_by', 'created_date', 'participant_count']
