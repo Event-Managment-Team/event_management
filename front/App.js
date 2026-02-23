@@ -1,5 +1,6 @@
 const { useState, useEffect } = React;
 
+
 // Mock Data
 const MOCK_USERS = [
     { email: 'student@university.edu', password: 'student123', role: 'student', name: 'Alex Johnson' },
@@ -226,6 +227,13 @@ function App() {
         }
     };
 
+    const handleUnregister = (eventId) => {
+        setRegisteredEvents(registeredEvents.filter(id => id !== eventId));
+        setEvents(events.map(e =>
+            e.id === eventId ? { ...e, participants: Math.max(0, e.participants - 1) } : e
+        ));
+    };
+
     const handleCreateEvent = (newEvent) => {
         const event = {
             ...newEvent,
@@ -261,6 +269,7 @@ function App() {
                             currentUser={currentUser}
                             registeredEvents={registeredEvents}
                             onRegister={handleRegister}
+                            onUnregister={handleUnregister}
                             onEventClick={(event) => {
                                 setSelectedEvent(event);
                                 setShowModal(true);
@@ -284,6 +293,10 @@ function App() {
                             onClose={() => setShowModal(false)}
                             onRegister={() => {
                                 handleRegister(selectedEvent.id);
+                                setShowModal(false);
+                            }}
+                            onUnregister={() => {
+                                handleUnregister(selectedEvent.id);
                                 setShowModal(false);
                             }}
                         />
@@ -365,7 +378,6 @@ function LoginPage({ onLogin }) {
                 <div className="hero-content">
                     <h1>Welcome to LINKEVENT</h1>
                     <p>Your centralized platform for planning, managing, and participating in all university events. Streamline event organization with secure registration and real-time updates.</p>
-
                     <div className="hero-features">
                         <div className="hero-feature">
                             <div className="hero-feature-icon">📅</div>
@@ -388,7 +400,6 @@ function LoginPage({ onLogin }) {
                     <div className="auth-visual-content">
                         <h3>Join Our Community</h3>
                         <p>Connect with thousands of students and faculty members through organized campus events</p>
-
                         <div className="auth-visual-features">
                             <div className="auth-feature-item">
                                 <div className="auth-feature-icon">🎯</div>
@@ -435,7 +446,6 @@ function LoginPage({ onLogin }) {
                                 required
                             />
                         </div>
-
                         <div className="form-group">
                             <label className="form-label">Password</label>
                             <input
@@ -447,7 +457,6 @@ function LoginPage({ onLogin }) {
                                 required
                             />
                         </div>
-
                         <button type="submit" className="btn-primary">
                             {isRegister ? 'Create Account' : 'Sign In'}
                         </button>
@@ -475,7 +484,7 @@ function LoginPage({ onLogin }) {
 }
 
 // Events Page Component
-function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, onRegister, onEventClick, onCreateClick }) {
+function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, onRegister, onUnregister, onEventClick, onCreateClick }) {
     return (
         <>
             <div className="events-header">
@@ -505,6 +514,7 @@ function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, 
                             event={event}
                             isRegistered={registeredEvents.includes(event.id)}
                             onRegister={onRegister}
+                            onUnregister={onUnregister}
                             onClick={onEventClick}
                         />
                     ))}
@@ -515,7 +525,7 @@ function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, 
 }
 
 // Event Card Component
-function EventCard({ event, isRegistered, onRegister, onClick }) {
+function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     return (
         <div className="event-card" onClick={() => onClick(event)}>
             <div className="event-header">
@@ -552,7 +562,8 @@ function EventCard({ event, isRegistered, onRegister, onClick }) {
                         className={`btn-register ${isRegistered ? 'btn-registered' : ''}`}
                         onClick={(e) => {
                             e.stopPropagation();
-                            if (!isRegistered) onRegister(event.id);
+                            if (isRegistered) onUnregister(event.id);
+                            else onRegister(event.id);
                         }}
                     >
                         {isRegistered ? '✓ Registered' : 'Register'}
@@ -564,7 +575,7 @@ function EventCard({ event, isRegistered, onRegister, onClick }) {
 }
 
 // Event Modal Component
-function EventModal({ event, isRegistered, onClose, onRegister }) {
+function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) {
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -640,14 +651,34 @@ function EventModal({ event, isRegistered, onClose, onRegister }) {
                         </button>
                     )}
                     {isRegistered && (
-                        <div style={{
-                            padding: '0.75rem 1.5rem',
-                            background: 'rgba(46, 204, 113, 0.1)',
-                            color: '#2ecc71',
-                            borderRadius: '10px',
-                            fontWeight: 600
-                        }}>
-                            ✓ You're registered!
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                            <div style={{
+                                padding: '0.75rem 1.5rem',
+                                background: 'rgba(46, 204, 113, 0.1)',
+                                color: '#2ecc71',
+                                borderRadius: '10px',
+                                fontWeight: 600
+                            }}>
+                                ✓ You're registered!
+                            </div>
+                            <button
+                                onClick={onUnregister}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    background: 'rgba(233, 69, 96, 0.08)',
+                                    color: '#e94560',
+                                    border: '2px solid rgba(233, 69, 96, 0.3)',
+                                    borderRadius: '10px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    fontFamily: 'DM Sans, sans-serif',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseOver={e => { e.target.style.background = '#e94560'; e.target.style.color = 'white'; }}
+                                onMouseOut={e => { e.target.style.background = 'rgba(233, 69, 96, 0.08)'; e.target.style.color = '#e94560'; }}
+                            >
+                                Cancel Registration
+                            </button>
                         </div>
                     )}
                 </div>
