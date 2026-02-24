@@ -1,6 +1,7 @@
 const { useState, useEffect } = React;
 
 // --- API Helper Layer ---
+// Change this to match your backend server address
 const API_BASE = 'http://127.0.0.1:8000';
 
 function getTokens() {
@@ -49,6 +50,13 @@ function formatApiError(d) {
     } catch {
         return 'An error occurred';
     }
+}
+
+function formatAgendaItem(item) {
+    if (item.time_slot) {
+        return `${item.time_slot} — ${item.action || ''}`;
+    }
+    return item.action || String(item);
 }
 
 // --- App Component ---
@@ -580,7 +588,7 @@ function EventModal({ event, onClose }) {
                                             fontSize: '0.85rem',
                                             fontWeight: 600
                                         }}>{idx + 1}</span>
-                                        <span>{item.time_slot ? `${item.time_slot} — ${item.action || ''}` : (item.action || String(item))}</span>
+                                        <span>{formatAgendaItem(item)}</span>
                                     </li>
                                 ))}
                             </ul>
