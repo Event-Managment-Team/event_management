@@ -27,8 +27,28 @@ async function apiFetch(endpoint, options = {}) {
     }
     const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
     const data = await res.json();
-    if (!res.ok) throw { status: res.status, data };
+    if (!res.ok) {
+        const err = new Error('API Error');
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
     return data;
+}
+
+function capitalize(str) {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1) : 'N/A';
+}
+
+function formatApiError(d) {
+    if (typeof d === 'string') return d;
+    if (d.detail) return d.detail;
+    if (d.message) return d.message;
+    try {
+        return Object.values(d).flat().filter(v => typeof v === 'string').join(', ') || 'An error occurred';
+    } catch {
+        return 'An error occurred';
+    }
 }
 
 // --- App Component ---
@@ -242,9 +262,7 @@ function AuthPage({ authStep, setAuthStep, pendingEmail, onLogin, onRegister, on
             const data = await onRegister(username, email, phone, password);
             setSuccess(data.message || 'Registration successful! Check your email for OTP.');
         } catch (err) {
-            const d = err.data || {};
-            const msg = d.detail || d.message || Object.values(d).flat().join(', ') || 'Registration failed';
-            setError(msg);
+            setError(formatApiError(err.data || {}));
         }
     };
 
@@ -475,7 +493,7 @@ function EventCard({ event, onClick }) {
                     </div>
                     <div className="info-item">
                         <span className="info-icon">🏷️</span>
-                        <span>{event.type ? event.type.charAt(0).toUpperCase() + event.type.slice(1) : 'N/A'}</span>
+                        <span>{event.type ? capitalize(event.type) : 'N/A'}</span>
                     </div>
                 </div>
 
@@ -523,7 +541,7 @@ function EventModal({ event, onClose }) {
                         </div>
                         <div className="info-item">
                             <span className="info-icon">🏷️</span>
-                            <span>{event.type ? event.type.charAt(0).toUpperCase() + event.type.slice(1) : 'N/A'}</span>
+                            <span>{event.type ? capitalize(event.type) : 'N/A'}</span>
                         </div>
                         <div className="info-item">
                             <span className="info-icon">👥</span>
@@ -562,7 +580,7 @@ function EventModal({ event, onClose }) {
                                             fontSize: '0.85rem',
                                             fontWeight: 600
                                         }}>{idx + 1}</span>
-                                        <span>{item.time_slot ? `${item.time_slot} — ${item.action}` : item.action}</span>
+                                        <span>{item.time_slot ? `${item.time_slot} — ${item.action || ''}` : (item.action || String(item))}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -679,9 +697,7 @@ function CreateEventModal({ onClose, onCreate }) {
             }
             await onCreate(payload);
         } catch (err) {
-            const d = err.data || {};
-            const msg = d.detail || d.message || Object.values(d).flat().join(', ') || 'Failed to create event';
-            setError(msg);
+            setError(formatApiError(err.data || {}));
         }
     };
 
