@@ -1,7 +1,6 @@
 const { useState, useEffect } = React;
 
 
-// Mock Data
 const MOCK_USERS = [
     { email: 'student@university.edu', password: 'student123', role: 'student', name: 'Alex Johnson' },
     { email: 'staff@university.edu', password: 'staff123', role: 'staff', name: 'Dr. Sarah Mitchell' },
@@ -191,7 +190,6 @@ const MOCK_EVENTS = [
     }
 ];
 
-// App Component
 function App() {
     const [currentUser, setCurrentUser] = useState(null);
     const [currentPage, setCurrentPage] = useState('home');
@@ -314,7 +312,6 @@ function App() {
     );
 }
 
-// Navbar Component
 function Navbar({ currentUser, currentPage, setCurrentPage, onLogout }) {
     return (
         <nav className="navbar">
@@ -350,7 +347,6 @@ function Navbar({ currentUser, currentPage, setCurrentPage, onLogout }) {
     );
 }
 
-// Login Page Component
 function LoginPage({ onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -483,7 +479,6 @@ function LoginPage({ onLogin }) {
     );
 }
 
-// Events Page Component
 function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, onRegister, onUnregister, onEventClick, onCreateClick }) {
     return (
         <>
@@ -524,7 +519,6 @@ function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, 
     );
 }
 
-// Event Card Component
 function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     return (
         <div className="event-card" onClick={() => onClick(event)}>
@@ -574,7 +568,6 @@ function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     );
 }
 
-// Event Modal Component
 function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) {
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -687,7 +680,6 @@ function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) 
     );
 }
 
-// Calendar Page Component
 function CalendarPage({ events }) {
     const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -755,7 +747,6 @@ function CalendarPage({ events }) {
     );
 }
 
-// Create Event Modal Component
 function CreateEventModal({ onClose, onCreate }) {
     const [formData, setFormData] = useState({
         title: '',
@@ -880,7 +871,6 @@ function CreateEventModal({ onClose, onCreate }) {
     );
 }
 
-// Admin Page Component
 function AdminPage({ events, users }) {
     const totalEvents = events.length;
     const publicEvents = events.filter(e => e.type === 'public').length;
@@ -980,5 +970,4 @@ function AdminPage({ events, users }) {
     );
 }
 
-// Render App
 ReactDOM.render(<App />, document.getElementById('root'));
