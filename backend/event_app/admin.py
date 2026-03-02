@@ -60,6 +60,7 @@ class EventAdmin(admin.ModelAdmin):
         'room'
     )
 
+    readonly_fields = ('created_by',)
     ordering = ('-created_date',)
     filter_horizontal = ('allowed_roles',)
     
@@ -84,11 +85,15 @@ class EventAdmin(admin.ModelAdmin):
             'classes': ('collapse',) 
         }),
     )
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
+    list_display = ('name', "id")
     search_fields = ('name',)
 
 @admin.register(AllowedParticipant)
