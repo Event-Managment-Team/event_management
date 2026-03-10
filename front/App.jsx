@@ -1,6 +1,5 @@
 const { useState, useEffect } = React;
 
-
 const MOCK_USERS = [
     { email: 'student@university.edu', password: 'student123', role: 'student', name: 'Alex Johnson' },
     { email: 'staff@university.edu',   password: 'staff123',   role: 'staff',   name: 'Dr. Sarah Mitchell' },
@@ -36,7 +35,8 @@ function App() {
     const [showModal, setShowModal]               = useState(false);
     const [showCreateModal, setShowCreateModal]   = useState(false);
     const [registeredEvents, setRegisteredEvents] = useState([]);
-    const [authPage, setAuthPage]                 = useState('login'); // 'login' | 'forgot'
+    const [authPage, setAuthPage]                 = useState('login');
+    const [pendingUser, setPendingUser]           = useState(null);   
 
     const handleLogin = (email, password) => {
         const user = MOCK_USERS.find(u => u.email === email && u.password === password);
@@ -44,14 +44,26 @@ function App() {
         return false;
     };
 
+    const handleRegisterOtp = (userData) => {
+        setPendingUser(userData);
+        setAuthPage('register-otp');
+    };
+
+    const handleRegisterComplete = () => {
+        setCurrentUser(pendingUser);
+        setCurrentPage('events');
+        setPendingUser(null);
+    };
+
     const handleLogout = () => {
         setCurrentUser(null);
         setCurrentPage('home');
         setAuthPage('login');
+        setPendingUser(null);
         setRegisteredEvents([]);
     };
 
-    const handleRegister = (eventId) => {
+    const handleEventRegister = (eventId) => {
         if (!registeredEvents.includes(eventId)) {
             setRegisteredEvents([...registeredEvents, eventId]);
             setEvents(events.map(e => e.id === eventId ? { ...e, participants: e.participants + 1 } : e));
@@ -77,15 +89,19 @@ function App() {
             )}
             {!currentUser ? (
                 authPage === 'login'
-                    ? <LoginPage onLogin={handleLogin} onForgotPassword={() => setAuthPage('forgot')} />
-                    : <ForgotPasswordPage onBack={() => setAuthPage('login')} />
+                    ? <LoginPage onLogin={handleLogin} onForgotPassword={() => setAuthPage('forgot')} onRegisterOtp={handleRegisterOtp} />
+                : authPage === 'forgot'
+                    ? <ForgotPasswordPage onBack={() => setAuthPage('login')} />
+                : authPage === 'register-otp'
+                    ? <RegisterOtpPage email={pendingUser?.email} onVerified={handleRegisterComplete} onBack={() => setAuthPage('login')} />
+                : null
             ) : (
                 <div className="main-content">
                     {currentPage === 'events' && (
                         <EventsPage
                             events={filteredEvents} filter={filter} setFilter={setFilter}
                             currentUser={currentUser} registeredEvents={registeredEvents}
-                            onRegister={handleRegister} onUnregister={handleUnregister}
+                            onRegister={handleEventRegister} onUnregister={handleUnregister}
                             onEventClick={(event) => { setSelectedEvent(event); setShowModal(true); }}
                             onCreateClick={() => setShowCreateModal(true)}
                         />
@@ -97,7 +113,7 @@ function App() {
                             event={selectedEvent}
                             isRegistered={registeredEvents.includes(selectedEvent.id)}
                             onClose={() => setShowModal(false)}
-                            onRegister={() => { handleRegister(selectedEvent.id); setShowModal(false); }}
+                            onRegister={() => { handleEventRegister(selectedEvent.id); setShowModal(false); }}
                             onUnregister={() => { handleUnregister(selectedEvent.id); setShowModal(false); }}
                         />
                     )}
@@ -128,24 +144,96 @@ function Navbar({ currentUser, currentPage, setCurrentPage, onLogout }) {
 }
 
 
-function LoginPage({ onLogin, onForgotPassword }) {
-    const [email, setEmail]           = useState('');
-    const [password, setPassword]     = useState('');
-    const [error, setError]           = useState('');
-    const [loading, setLoading]       = useState(false);
-    const [isRegister, setIsRegister] = useState(false);
+function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
+    const [isRegister, setIsRegister]           = useState(false);
+    const [email, setEmail]                     = useState('');
+    const [password, setPassword]               = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [fullName, setFullName]               = useState('');
+    const [showPass, setShowPass]               = useState(false);
+    const [showConfirm, setShowConfirm]         = useState(false);
+    const [error, setError]                     = useState('');
+    const [loading, setLoading]                 = useState(false);
+
+    const getStrength = (p) => {
+        let s = 0;
+        if (p.length >= 8)           s++;
+        if (/[A-Z]/.test(p))         s++;
+        if (/[0-9]/.test(p))         s++;
+        if (/[^A-Za-z0-9]/.test(p)) s++;
+        return s;
+    };
+    const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+    const strengthColor = ['', '#e94560', '#f39c12', '#3498db', '#2ecc71'];
+    const strength = getStrength(password);
+
+    const switchMode = () => {
+        setIsRegister(!isRegister);
+        setError('');
+        setPassword('');
+        setConfirmPassword('');
+        setFullName('');
+        setShowPass(false);
+        setShowConfirm(false);
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
         setError('');
-        if (!email.includes('@university.edu')) { setError('Please use a valid university email address'); return; }
-        setLoading(true);
-        setTimeout(() => {
-            const success = onLogin(email, password);
-            if (!success) setError('Invalid email or password');
-            setLoading(false);
-        }, 600);
+
+        if (isRegister) {
+            if (!fullName.trim())           { setError('Please enter your full name'); return; }
+            if (password.length < 8)        { setError('Password must be at least 8 characters'); return; }
+            if (password !== confirmPassword){ setError('Passwords do not match'); return; }
+            setLoading(true);
+
+            setTimeout(() => {
+                setLoading(false);
+                onRegisterOtp({ email, name: fullName, role: 'student' });
+            }, 700);
+        } else {
+            
+
+            setLoading(true);
+            setTimeout(() => {
+                const success = onLogin(email, password);
+                if (!success) setError('Invalid email or password');
+                setLoading(false);
+            }, 600);
+        }
     };
+
+    const AuthVisual = () => (
+        <div className="auth-visual">
+            <div className="auth-visual-content">
+                <h3>Join Our Community</h3>
+                <p>Connect with thousands of students and faculty members through organized campus events</p>
+                <div className="auth-visual-features">
+                    <div className="auth-feature-item">
+                        <div className="auth-feature-icon">🎯</div>
+                        <div>
+                            <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Public & Private Events</div>
+                            <div style={{ fontSize: '0.9rem', opacity: 0.85 }}>Access both open and exclusive events</div>
+                        </div>
+                    </div>
+                    <div className="auth-feature-item">
+                        <div className="auth-feature-icon">📊</div>
+                        <div>
+                            <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Real-Time Updates</div>
+                            <div style={{ fontSize: '0.9rem', opacity: 0.85 }}>Get instant notifications and reminders</div>
+                        </div>
+                    </div>
+                    <div className="auth-feature-item">
+                        <div className="auth-feature-icon">👥</div>
+                        <div>
+                            <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Networking Opportunities</div>
+                            <div style={{ fontSize: '0.9rem', opacity: 0.85 }}>Connect with peers and faculty</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="main-content">
@@ -162,76 +250,124 @@ function LoginPage({ onLogin, onForgotPassword }) {
             </div>
 
             <div className="auth-container">
-                <div className="auth-visual">
-                    <div className="auth-visual-content">
-                        <h3>Join Our Community</h3>
-                        <p>Connect with thousands of students and faculty members through organized campus events</p>
-                        <div className="auth-visual-features">
-                            <div className="auth-feature-item">
-                                <div className="auth-feature-icon">🎯</div>
-                                <div>
-                                    <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Public & Private Events</div>
-                                    <div style={{ fontSize: '0.9rem', opacity: 0.85 }}>Access both open and exclusive events</div>
-                                </div>
-                            </div>
-                            <div className="auth-feature-item">
-                                <div className="auth-feature-icon">📊</div>
-                                <div>
-                                    <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Real-Time Updates</div>
-                                    <div style={{ fontSize: '0.9rem', opacity: 0.85 }}>Get instant notifications and reminders</div>
-                                </div>
-                            </div>
-                            <div className="auth-feature-item">
-                                <div className="auth-feature-icon">👥</div>
-                                <div>
-                                    <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Networking Opportunities</div>
-                                    <div style={{ fontSize: '0.9rem', opacity: 0.85 }}>Connect with peers and faculty</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <AuthVisual />
 
                 <div className="auth-form-container">
                     <div className="auth-header">
                         <h2>{isRegister ? 'Create Account' : 'Sign In'}</h2>
-                        <p>Use your university email to continue</p>
+                        <p>{isRegister ? 'Register with your university email' : 'Use your university email to continue'}</p>
                     </div>
 
                     {error && <div className="error-message">{error}</div>}
 
                     <form onSubmit={handleSubmit}>
+
+                        {/* Full name — only on register */}
+                        {isRegister && (
+                            <div className="form-group">
+                                <label className="form-label">Full Name</label>
+                                <input
+                                    type="text" className="form-input"
+                                    placeholder="Your full name"
+                                    value={fullName} onChange={(e) => setFullName(e.target.value)}
+                                    required disabled={loading}
+                                />
+                            </div>
+                        )}
+
                         <div className="form-group">
                             <label className="form-label">University Email</label>
-                            <input type="email" className="form-input" placeholder="your.email@university.edu" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
+                            <input
+                                type="email" className="form-input"
+                                placeholder="your@email.com"
+                                value={email} onChange={(e) => setEmail(e.target.value)}
+                                required disabled={loading}
+                            />
                         </div>
+
+                        {/* Password with show/hide toggle */}
                         <div className="form-group">
                             <label className="form-label">Password</label>
-                            <input type="password" className="form-input" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} />
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showPass ? 'text' : 'password'} className="form-input"
+                                    placeholder={isRegister ? 'Minimum 8 characters' : 'Enter your password'}
+                                    value={password} onChange={(e) => setPassword(e.target.value)}
+                                    required disabled={loading}
+                                    style={{ paddingRight: '3rem' }}
+                                />
+                                <button type="button" onClick={() => setShowPass(!showPass)}
+                                    style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: '#999' }}>
+                                    {showPass ? '🙈' : '👁️'}
+                                </button>
+                            </div>
+
+                            {/* Strength bar — only on register */}
+                            {isRegister && password.length > 0 && (
+                                <div style={{ marginTop: '0.5rem' }}>
+                                    <div style={{ display: 'flex', gap: 4, marginBottom: '0.25rem' }}>
+                                        {[1,2,3,4].map(i => (
+                                            <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= strength ? strengthColor[strength] : '#e0e0e0', transition: 'background 0.3s' }} />
+                                        ))}
+                                    </div>
+                                    <span style={{ fontSize: '0.8rem', color: strengthColor[strength], fontWeight: 600 }}>{strengthLabel[strength]}</span>
+                                </div>
+                            )}
                         </div>
 
-                        <div style={{ textAlign: 'right', marginBottom: '1.25rem', marginTop: '-0.5rem' }}>
-                            <a className="auth-link" onClick={onForgotPassword} style={{ fontSize: '0.9rem' }}>Forgot password?</a>
-                        </div>
+                        {/* Confirm password — only on register */}
+                        {isRegister && (
+                            <div className="form-group">
+                                <label className="form-label">Confirm Password</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type={showConfirm ? 'text' : 'password'} className="form-input"
+                                        placeholder="Repeat your password"
+                                        value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                                        required disabled={loading}
+                                        style={{ paddingRight: '3rem', borderColor: confirmPassword ? (confirmPassword === password ? '#2ecc71' : '#e94560') : undefined }}
+                                    />
+                                    <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                                        style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: '#999' }}>
+                                        {showConfirm ? '🙈' : '👁️'}
+                                    </button>
+                                </div>
+                                {confirmPassword && confirmPassword !== password && (
+                                    <div style={{ fontSize: '0.85rem', color: '#e94560', marginTop: '0.4rem' }}>Passwords do not match</div>
+                                )}
+                                {confirmPassword && confirmPassword === password && (
+                                    <div style={{ fontSize: '0.85rem', color: '#2ecc71', marginTop: '0.4rem' }}>✓ Passwords match</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Forgot password — only on login */}
+                        {!isRegister && (
+                            <div style={{ textAlign: 'right', marginBottom: '1.25rem', marginTop: '-0.5rem' }}>
+                                <a className="auth-link" onClick={onForgotPassword} style={{ fontSize: '0.9rem' }}>Forgot password?</a>
+                            </div>
+                        )}
 
                         <button type="submit" className="btn-primary" disabled={loading}>
-                            {loading ? 'Signing in...' : (isRegister ? 'Create Account' : 'Sign In')}
+                            {loading ? (isRegister ? 'Creating Account...' : 'Signing in...') : (isRegister ? 'Create Account' : 'Sign In')}
                         </button>
                     </form>
 
                     <div className="auth-switch">
                         {isRegister ? "Already have an account? " : "Don't have an account? "}
-                        <a className="auth-link" onClick={() => setIsRegister(!isRegister)}>{isRegister ? 'Sign In' : 'Register'}</a>
+                        <a className="auth-link" onClick={switchMode}>{isRegister ? 'Sign In' : 'Register'}</a>
                     </div>
 
-                    <div style={{ marginTop: '2rem', padding: '1.25rem', background: 'linear-gradient(135deg,rgba(102,126,234,0.05),rgba(118,75,162,0.05))', borderRadius: '12px', fontSize: '0.9rem', border: '1px solid rgba(102,126,234,0.1)' }}>
-                        <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: '#667eea' }}>🔐 Demo Accounts:</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', color: '#666' }}>
-                            <div><strong>Student:</strong> student@university.edu / student123</div>
-                            <div><strong>Staff:</strong> staff@university.edu / staff123</div>
-                            <div><strong>Admin:</strong> admin@university.edu / admin123</div>
+                    {!isRegister && (
+                        <div style={{ marginTop: '2rem', padding: '1.25rem', background: 'linear-gradient(135deg,rgba(102,126,234,0.05),rgba(118,75,162,0.05))', borderRadius: '12px', fontSize: '0.9rem', border: '1px solid rgba(102,126,234,0.1)' }}>
+                            <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: '#667eea' }}>🔐 Demo Accounts:</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', color: '#666' }}>
+                                <div><strong>Student:</strong> student@university.edu / student123</div>
+                                <div><strong>Staff:</strong> staff@university.edu / staff123</div>
+                                <div><strong>Admin:</strong> admin@university.edu / admin123</div>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -271,9 +407,7 @@ function ForgotPasswordPage({ onBack }) {
 
     const handleSendCode = (e) => {
         e.preventDefault(); setError('');
-        if (!email.includes('@university.edu')) { setError('Please use a valid university email address'); return; }
         setLoading(true);
-        // TODO: replace with → fetch('/auth/forgot-password', { method:'POST', body: JSON.stringify({ email }) })
         setTimeout(() => { setLoading(false); setStep('code'); setResendTimer(60); }, 800);
     };
 
@@ -374,7 +508,7 @@ function ForgotPasswordPage({ onBack }) {
                             <form onSubmit={handleSendCode}>
                                 <div className="form-group">
                                     <label className="form-label">University Email</label>
-                                    <input type="email" className="form-input" placeholder="your.email@university.edu" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} autoFocus />
+                                    <input type="email" className="form-input" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} autoFocus />
                                 </div>
                                 <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Sending Code...' : 'Send Reset Code →'}</button>
                             </form>
@@ -468,6 +602,163 @@ function ForgotPasswordPage({ onBack }) {
 }
 
 
+
+
+function RegisterOtpPage({ email, onVerified, onBack }) {
+    const [code, setCode]             = useState(['', '', '', '', '', '']);
+    const [error, setError]           = useState('');
+    const [success, setSuccess]       = useState('');
+    const [loading, setLoading]       = useState(false);
+    const [resendTimer, setResendTimer] = useState(60);
+
+    useEffect(() => {
+        if (resendTimer <= 0) return;
+        const t = setInterval(() => setResendTimer(n => n - 1), 1000);
+        return () => clearInterval(t);
+    }, [resendTimer]);
+
+    const handleCodeChange = (val, idx) => {
+        if (!/^\d?$/.test(val)) return;
+        const updated = [...code]; updated[idx] = val; setCode(updated);
+        if (val && idx < 5) document.getElementById(`reg-otp-${idx + 1}`)?.focus();
+    };
+
+    const handleCodeKeyDown = (e, idx) => {
+        if (e.key === 'Backspace' && !code[idx] && idx > 0)
+            document.getElementById(`reg-otp-${idx - 1}`)?.focus();
+    };
+
+    const handleVerify = (e) => {
+        e.preventDefault();
+        setError('');
+        const fullCode = code.join('');
+        if (fullCode.length < 6) { setError('Please enter the full 6-digit code'); return; }
+        setLoading(true);
+        // TODO: replace with → fetch('/auth/verify-email', { method:'POST', body: JSON.stringify({ email, otp: fullCode }) })
+        setTimeout(() => {
+            setLoading(false);
+            onVerified();
+        }, 800);
+    };
+
+    const handleResend = () => {
+        if (resendTimer > 0) return;
+        setCode(['', '', '', '', '', '']);
+        setError('');
+        setSuccess('A new code has been sent!');
+        setResendTimer(60);
+        // TODO: replace with → fetch('/auth/resend-otp', { method:'POST', body: JSON.stringify({ email }) })
+    };
+
+    return (
+        <div className="main-content">
+            <div className="hero">
+                <div className="hero-content">
+                    <h1>Welcome to LINKEVENT</h1>
+                    <p>Your centralized platform for planning, managing, and participating in all university events.</p>
+                    <div className="hero-features">
+                        <div className="hero-feature"><div className="hero-feature-icon">📅</div><span>Easy Event Creation</span></div>
+                        <div className="hero-feature"><div className="hero-feature-icon">🔒</div><span>Secure Registration</span></div>
+                        <div className="hero-feature"><div className="hero-feature-icon">📧</div><span>Smart Notifications</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="auth-container">
+                <div className="auth-visual" style={{ background: 'linear-gradient(135deg,#667eea,#764ba2)' }}>
+                    <div className="auth-visual-content">
+                        <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>📧</div>
+                        <h3>Verify Your Email</h3>
+                        <p>Almost there! Enter the 6-digit code we sent to your university email to activate your account.</p>
+                        <div className="auth-visual-features" style={{ marginTop: '2rem' }}>
+                            <div className="auth-feature-item">
+                                <div className="auth-feature-icon">🔢</div>
+                                <div>
+                                    <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>6-Digit Code</div>
+                                    <div style={{ fontSize: '0.9rem', opacity: 0.85 }}>Check your university inbox</div>
+                                </div>
+                            </div>
+                            <div className="auth-feature-item">
+                                <div className="auth-feature-icon">⏱️</div>
+                                <div>
+                                    <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Code Expires in 10 min</div>
+                                    <div style={{ fontSize: '0.9rem', opacity: 0.85 }}>Request a new one if needed</div>
+                                </div>
+                            </div>
+                            <div className="auth-feature-item">
+                                <div className="auth-feature-icon">✅</div>
+                                <div>
+                                    <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>One-Time Verification</div>
+                                    <div style={{ fontSize: '0.9rem', opacity: 0.85 }}>Only needed once at signup</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="auth-form-container">
+                    <div className="auth-header">
+                        <h2>Verify Email</h2>
+                        <p>We sent a 6-digit code to <strong>{email}</strong></p>
+                    </div>
+
+                    {error   && <div className="error-message">{error}</div>}
+                    {success && <div className="success-message">{success}</div>}
+
+                    <form onSubmit={handleVerify}>
+                        <div className="form-group">
+                            <label className="form-label">Verification Code</label>
+                            <div style={{ display: 'flex', gap: '0.65rem', justifyContent: 'center', margin: '0.5rem 0 1.75rem' }}>
+                                {code.map((digit, i) => (
+                                    <input
+                                        key={i}
+                                        id={`reg-otp-${i}`}
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={1}
+                                        value={digit}
+                                        onChange={(e) => handleCodeChange(e.target.value, i)}
+                                        onKeyDown={(e) => handleCodeKeyDown(e, i)}
+                                        disabled={loading}
+                                        autoFocus={i === 0}
+                                        style={{
+                                            width: 48, height: 58, textAlign: 'center',
+                                            fontSize: '1.5rem', fontWeight: 700,
+                                            border: '2px solid ' + (digit ? '#667eea' : '#e0e0e0'),
+                                            borderRadius: 12, outline: 'none',
+                                            fontFamily: 'DM Sans, sans-serif',
+                                            background: digit ? 'rgba(102,126,234,0.05)' : 'white',
+                                            transition: 'border-color 0.2s'
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <button type="submit" className="btn-primary" disabled={loading}>
+                            {loading ? 'Verifying...' : 'Verify & Create Account'}
+                        </button>
+                    </form>
+
+                    <div style={{ textAlign: 'center', marginTop: '1.25rem', color: '#666', fontSize: '0.95rem' }}>
+                        Didn't receive it?{' '}
+                        {resendTimer > 0
+                            ? <span style={{ color: '#999' }}>Resend in {resendTimer}s</span>
+                            : <a className="auth-link" onClick={handleResend}>Resend Code</a>
+                        }
+                    </div>
+
+                    <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+                        <a className="auth-link" onClick={onBack}>← Back to Sign In</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Events Page ──────────────────────────────────────────────────────────────
+
 function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, onRegister, onUnregister, onEventClick, onCreateClick }) {
     return (
         <>
@@ -493,6 +784,7 @@ function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, 
     );
 }
 
+// ─── Event Card ───────────────────────────────────────────────────────────────
 
 function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     return (
@@ -519,6 +811,7 @@ function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     );
 }
 
+// ─── Event Modal ──────────────────────────────────────────────────────────────
 
 function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) {
     return (
@@ -567,6 +860,7 @@ function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) 
     );
 }
 
+// ─── Calendar Page ────────────────────────────────────────────────────────────
 
 function CalendarPage({ events }) {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -609,6 +903,7 @@ function CalendarPage({ events }) {
     );
 }
 
+// ─── Create Event Modal ───────────────────────────────────────────────────────
 
 function CreateEventModal({ onClose, onCreate }) {
     const [formData, setFormData]             = useState({ title: '', description: '', date: '', time: '', location: '', type: 'public', maxParticipants: 100 });
@@ -676,6 +971,7 @@ function CreateEventModal({ onClose, onCreate }) {
     );
 }
 
+// ─── Admin Page ───────────────────────────────────────────────────────────────
 
 function AdminPage({ events, users }) {
     const totalEvents       = events.length;
