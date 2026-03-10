@@ -1,6 +1,5 @@
 const { useState, useEffect } = React;
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const MOCK_USERS = [
     { email: 'student@university.edu', password: 'student123', role: 'student', name: 'Alex Johnson' },
@@ -27,7 +26,6 @@ const MOCK_EVENTS = [
 ];
 
 
-// ─── App Component ────────────────────────────────────────────────────────────
 
 function App() {
     const [currentUser, setCurrentUser]           = useState(null);
@@ -110,7 +108,6 @@ function App() {
     );
 }
 
-// ─── Navbar ───────────────────────────────────────────────────────────────────
 
 function Navbar({ currentUser, currentPage, setCurrentPage, onLogout }) {
     return (
@@ -130,7 +127,6 @@ function Navbar({ currentUser, currentPage, setCurrentPage, onLogout }) {
     );
 }
 
-// ─── Login Page ───────────────────────────────────────────────────────────────
 
 function LoginPage({ onLogin, onForgotPassword }) {
     const [email, setEmail]           = useState('');
@@ -242,8 +238,6 @@ function LoginPage({ onLogin, onForgotPassword }) {
     );
 }
 
-// ─── Forgot Password Page ─────────────────────────────────────────────────────
-// Step 1: email  →  Step 2: verify code  →  Step 3: new password  →  done
 
 function ForgotPasswordPage({ onBack }) {
     const [step, setStep]                       = useState('email');
@@ -287,7 +281,6 @@ function ForgotPasswordPage({ onBack }) {
         e.preventDefault(); setError('');
         if (code.join('').length < 6) { setError('Please enter the full 6-digit code'); return; }
         setLoading(true);
-        // TODO: replace with → fetch('/auth/verify-reset-code', { method:'POST', body: JSON.stringify({ email, code: code.join('') }) })
         setTimeout(() => { setLoading(false); setStep('newpass'); }, 800);
     };
 
@@ -296,7 +289,6 @@ function ForgotPasswordPage({ onBack }) {
         if (newPassword.length < 8)          { setError('Password must be at least 8 characters'); return; }
         if (newPassword !== confirmPassword)  { setError('Passwords do not match'); return; }
         setLoading(true);
-        // TODO: replace with → fetch('/auth/reset-password', { method:'POST', body: JSON.stringify({ email, password: newPassword }) })
         setTimeout(() => { setLoading(false); setStep('done'); }, 800);
     };
 
@@ -311,7 +303,6 @@ function ForgotPasswordPage({ onBack }) {
     const handleResend = () => {
         if (resendTimer > 0) return;
         setCode(['', '', '', '', '', '']); setError(''); setResendTimer(60);
-        // TODO: replace with → fetch('/auth/forgot-password', ...)
     };
 
     const stepKeys = ['email', 'code', 'newpass'];
@@ -476,7 +467,6 @@ function ForgotPasswordPage({ onBack }) {
     );
 }
 
-// ─── Events Page ──────────────────────────────────────────────────────────────
 
 function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, onRegister, onUnregister, onEventClick, onCreateClick }) {
     return (
@@ -503,7 +493,6 @@ function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, 
     );
 }
 
-// ─── Event Card ───────────────────────────────────────────────────────────────
 
 function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     return (
@@ -530,7 +519,6 @@ function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     );
 }
 
-// ─── Event Modal ──────────────────────────────────────────────────────────────
 
 function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) {
     return (
@@ -579,7 +567,6 @@ function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) 
     );
 }
 
-// ─── Calendar Page ────────────────────────────────────────────────────────────
 
 function CalendarPage({ events }) {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -622,7 +609,6 @@ function CalendarPage({ events }) {
     );
 }
 
-// ─── Create Event Modal ───────────────────────────────────────────────────────
 
 function CreateEventModal({ onClose, onCreate }) {
     const [formData, setFormData]             = useState({ title: '', description: '', date: '', time: '', location: '', type: 'public', maxParticipants: 100 });
@@ -690,7 +676,6 @@ function CreateEventModal({ onClose, onCreate }) {
     );
 }
 
-// ─── Admin Page ───────────────────────────────────────────────────────────────
 
 function AdminPage({ events, users }) {
     const totalEvents       = events.length;
