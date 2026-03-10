@@ -634,7 +634,6 @@ function RegisterOtpPage({ email, onVerified, onBack }) {
         const fullCode = code.join('');
         if (fullCode.length < 6) { setError('Please enter the full 6-digit code'); return; }
         setLoading(true);
-        // TODO: replace with → fetch('/auth/verify-email', { method:'POST', body: JSON.stringify({ email, otp: fullCode }) })
         setTimeout(() => {
             setLoading(false);
             onVerified();
@@ -647,7 +646,6 @@ function RegisterOtpPage({ email, onVerified, onBack }) {
         setError('');
         setSuccess('A new code has been sent!');
         setResendTimer(60);
-        // TODO: replace with → fetch('/auth/resend-otp', { method:'POST', body: JSON.stringify({ email }) })
     };
 
     return (
@@ -757,7 +755,6 @@ function RegisterOtpPage({ email, onVerified, onBack }) {
     );
 }
 
-// ─── Events Page ──────────────────────────────────────────────────────────────
 
 function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, onRegister, onUnregister, onEventClick, onCreateClick }) {
     return (
@@ -784,7 +781,6 @@ function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, 
     );
 }
 
-// ─── Event Card ───────────────────────────────────────────────────────────────
 
 function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     return (
@@ -811,7 +807,6 @@ function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     );
 }
 
-// ─── Event Modal ──────────────────────────────────────────────────────────────
 
 function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) {
     return (
@@ -860,7 +855,6 @@ function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) 
     );
 }
 
-// ─── Calendar Page ────────────────────────────────────────────────────────────
 
 function CalendarPage({ events }) {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -903,7 +897,6 @@ function CalendarPage({ events }) {
     );
 }
 
-// ─── Create Event Modal ───────────────────────────────────────────────────────
 
 function CreateEventModal({ onClose, onCreate }) {
     const [formData, setFormData]             = useState({ title: '', description: '', date: '', time: '', location: '', type: 'public', maxParticipants: 100 });
@@ -971,7 +964,6 @@ function CreateEventModal({ onClose, onCreate }) {
     );
 }
 
-// ─── Admin Page ───────────────────────────────────────────────────────────────
 
 function AdminPage({ events, users }) {
     const totalEvents       = events.length;
@@ -1038,6 +1030,5 @@ function AdminPage({ events, users }) {
     );
 }
 
-// ─── Render ───────────────────────────────────────────────────────────────────
 
 ReactDOM.render(<App />, document.getElementById('root'));
