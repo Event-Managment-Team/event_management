@@ -39,7 +39,6 @@ body {
     to { opacity: 1; }
 }
 
-/* Navigation */
 .navbar {
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(20px);
@@ -128,14 +127,12 @@ body {
     box-shadow: var(--shadow-md);
 }
 
-/* Main Content */
 .main-content {
     max-width: 1400px;
     margin: 2rem auto;
     padding: 0 2rem;
 }
 
-/* Hero Section */
 .hero {
     background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
     border-radius: 32px;
@@ -239,7 +236,6 @@ body {
     font-size: 1.25rem;
 }
 
-/* Login/Register Forms */
 .auth-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -424,7 +420,7 @@ body {
     text-decoration: underline;
 }
 
-/* Events Grid */
+
 .events-header {
     display: flex;
     justify-content: space-between;
@@ -497,7 +493,6 @@ body {
     animation: fadeIn 0.6s ease-out 0.2s both;
 }
 
-/* Event Card */
 .event-card {
     background: white;
     border-radius: 20px;
@@ -615,7 +610,6 @@ body {
     background: var(--success);
 }
 
-/* Modal */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -705,7 +699,6 @@ body {
     flex-wrap: wrap;
 }
 
-/* Create Event Form */
 .create-event-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -901,7 +894,6 @@ body {
     background: #d0d0d0;
 }
 
-/* Admin Panel */
 .admin-dashboard {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1015,7 +1007,6 @@ tr:hover {
     color: #f39c12;
 }
 
-/* Calendar */
 .calendar-container {
     background: white;
     border-radius: 20px;
@@ -1120,7 +1111,6 @@ tr:hover {
     bottom: 8px;
 }
 
-/* Loading State */
 .loading {
     display: flex;
     justify-content: center;
@@ -1141,7 +1131,6 @@ tr:hover {
     to { transform: rotate(360deg); }
 }
 
-/* Empty State */
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;
@@ -1164,7 +1153,6 @@ tr:hover {
     color: #999;
 }
 
-/* Success Message */
 .success-message {
     background: rgba(46, 204, 113, 0.1);
     border-left: 4px solid var(--success);
@@ -1186,7 +1174,6 @@ tr:hover {
     }
 }
 
-/* Error Message */
 .error-message {
     background: rgba(233, 69, 96, 0.1);
     border-left: 4px solid var(--highlight);
@@ -1197,7 +1184,7 @@ tr:hover {
     animation: slideIn 0.3s ease-out;
 }
 
-/* Responsive Design */
+
 @media (max-width: 1024px) {
     .hero h1 { font-size: 2.5rem; }
     .events-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
