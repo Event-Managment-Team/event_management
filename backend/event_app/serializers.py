@@ -11,6 +11,22 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('username', 'email', 'phone', 'password')
 
+    
+    def validate_email(self, value):
+        
+        allowed_domains = ['beu.edu.az', 'std.beu.edu.az']
+        
+        
+        whitelist_emails = ['senin_test_emailin@gmail.com'] 
+
+        email_domain = value.split('@')[-1].lower()
+
+        if value not in whitelist_emails and email_domain not in allowed_domains:
+            raise serializers.ValidationError(
+                "Qeydiyyat üçün yalnız universitet emaili tələb olunur (@beu.edu.az)."
+            )
+        return value
+
     def create(self, validated_data):
         user = CustomUser(
             username=validated_data['username'],
@@ -22,6 +38,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
+
+
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6, min_length=6)
@@ -29,6 +47,9 @@ class VerifyOTPSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(help_text="Enter your refresh token to logout")
 
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -48,7 +69,6 @@ class EventImageSerializer(serializers.ModelSerializer):
         model = EventImage
         fields = ['id', 'event', 'image', 'uploaded_at']
         read_only_fields = ['uploaded_at']
-
 
 class EventAgendaSerializer(serializers.ModelSerializer):
     class Meta:

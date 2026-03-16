@@ -1,14 +1,15 @@
-"""
-Django settings for event_management project.
-"""
-
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv  
+
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-=z(hqedy8ctol!1!72+_*0^kb@decfs9)_s^k&x#xib0$(1@h$'
+
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key')
 
 DEBUG = True
 ALLOWED_HOSTS = ['*']
@@ -24,19 +25,21 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'drf_yasg',
     'corsheaders',
 
+    # My apps
     'event_app',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -49,7 +52,7 @@ ROOT_URLCONF = 'event_management.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'event_app' / 'templates'],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -77,33 +80,19 @@ DATABASES = {
 AUTH_USER_MODEL = 'event_app.CustomUser'
 
 # --------------------------
-# Password validation
-# --------------------------
-AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-]
-
-# --------------------------
 # Internationalization
 # --------------------------
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Baku' 
 USE_I18N = True
 USE_TZ = True
 
 # --------------------------
-# Static files
+# Static & Media files
 # --------------------------
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'event_app' / 'static']
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# --------------------------
-# Media files
-# --------------------------
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -129,18 +118,20 @@ SIMPLE_JWT = {
 # --------------------------
 # CORS configuration
 # --------------------------
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = True 
 
 # --------------------------
 # Email configuration (Gmail SMTP)
 # --------------------------
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'tnihad257@gmail.com'
-EMAIL_HOST_PASSWORD = 'zzzv msti nuyr trak'
-DEFAULT_FROM_EMAIL = f'Event System <{EMAIL_HOST_USER}>'
+
+
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = f'BEU Event System <{EMAIL_HOST_USER}>'
 
 # --------------------------
 # Swagger / OpenAPI settings
@@ -151,7 +142,7 @@ SWAGGER_SETTINGS = {
             'type': 'apiKey',
             'name': 'Authorization',
             'in': 'header',
-            'description': 'JWT Authorization. Example: "Bearer {token}"'
+            'description': 'JWT Authorization. "Bearer {token}" formatında daxil edin.'
         }
     },
     'USE_SESSION_AUTH': False,
