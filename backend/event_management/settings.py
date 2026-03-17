@@ -8,6 +8,9 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Frontend source directory (front/ at repository root)
+FRONTEND_DIR = BASE_DIR.parent / 'front'
+
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key')
 
@@ -52,7 +55,7 @@ ROOT_URLCONF = 'event_management.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')], 
+        'DIRS': [os.path.join(BASE_DIR, 'templates'), FRONTEND_DIR],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -92,6 +95,8 @@ USE_TZ = True
 # --------------------------
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# Include front/ directory so its assets (App.jsx, styles.css) are served at /static/
+STATICFILES_DIRS = [FRONTEND_DIR]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
