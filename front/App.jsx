@@ -1,83 +1,257 @@
 const { useState, useEffect } = React;
 
-const MOCK_USERS = [
-    { email: 'student@university.edu', password: 'student123', role: 'student', name: 'Alex Johnson' },
-    { email: 'staff@university.edu',   password: 'staff123',   role: 'staff',   name: 'Dr. Sarah Mitchell' },
-    { email: 'admin@university.edu',   password: 'admin123',   role: 'admin',   name: 'Admin User' }
-];
+// ---------------------------------------------------------------------------
+// API helpers
+// ---------------------------------------------------------------------------
+const API_BASE = '';  // Same origin: Django serves both API and frontend
 
-const MOCK_EVENTS = [
-    { id: 1,  title: 'Annual Tech Summit 2025',         description: 'Join us for an exciting day of innovation, technology discussions, and networking opportunities with industry leaders.',                       date: '2025-03-15', time: '09:00 AM', location: 'Main Auditorium, Building A',    type: 'public',  participants: 145, maxParticipants: 200, agenda: ['Opening Keynote - Future of AI', 'Workshop: Machine Learning Basics', 'Panel Discussion: Tech Careers', 'Networking Lunch', 'Closing Remarks'] },
-    { id: 2,  title: 'Faculty Research Symposium',      description: 'Exclusive presentation of cutting-edge research findings by our distinguished faculty members across various disciplines.',                  date: '2025-03-20', time: '02:00 PM', location: 'Research Center, Room 301',      type: 'private', participants: 32,  maxParticipants: 50,  agenda: ['Welcome Address', 'Research Presentations - Session 1', 'Coffee Break', 'Research Presentations - Session 2', 'Q&A and Discussion'] },
-    { id: 3,  title: 'Student Innovation Showcase',     description: 'Students present their innovative projects and prototypes to the university community. Featuring awards and prizes!',                       date: '2025-03-25', time: '10:00 AM', location: 'Innovation Lab, Building C',     type: 'public',  participants: 89,  maxParticipants: 150, agenda: ['Registration & Setup', 'Project Demonstrations Round 1', 'Lunch Break', 'Project Demonstrations Round 2', 'Judging & Awards Ceremony'] },
-    { id: 4,  title: 'Career Development Workshop',     description: 'Essential skills workshop covering resume building, interview techniques, networking strategies, and career planning.',                      date: '2025-04-05', time: '03:00 PM', location: 'Career Center, Hall B',          type: 'public',  participants: 67,  maxParticipants: 100, agenda: ['Resume & CV Workshop', 'LinkedIn Profile Optimization', 'Mock Interview Sessions', 'Networking Tips & Strategies', 'Career Path Planning'] },
-    { id: 5,  title: 'Department Strategy Meeting',     description: 'Strategic planning session for department heads and senior staff members to discuss future initiatives.',                                   date: '2025-04-10', time: '11:00 AM', location: 'Executive Board Room',           type: 'private', participants: 15,  maxParticipants: 25,  agenda: ['Budget Review Q1', 'Strategic Goals for 2025-2026', 'Resource Allocation', 'Action Planning', 'Next Steps'] },
-    { id: 6,  title: 'Web Development Bootcamp',        description: 'Intensive 3-day bootcamp covering HTML, CSS, JavaScript, React, and modern web development practices.',                                    date: '2025-04-15', time: '09:00 AM', location: 'Computer Lab 5, Building D',    type: 'public',  participants: 78,  maxParticipants: 80,  agenda: ['HTML & CSS Fundamentals', 'JavaScript Essentials', 'React Introduction', 'Building Your First App', 'Deployment & Best Practices'] },
-    { id: 7,  title: 'Mental Health Awareness Week',    description: 'Campus-wide initiative promoting mental health awareness with workshops, counseling sessions, and wellness activities.',                    date: '2025-04-18', time: '10:00 AM', location: 'Student Wellness Center',        type: 'public',  participants: 134, maxParticipants: 200, agenda: ['Opening Session', 'Stress Management Workshop', 'Group Meditation', 'Mental Health Resources Fair', 'Community Circle'] },
-    { id: 8,  title: 'Alumni Networking Night',         description: 'Connect with successful alumni from various industries. Great opportunity for mentorship and career guidance.',                             date: '2025-04-22', time: '06:00 PM', location: 'University Club, Main Campus',   type: 'public',  participants: 95,  maxParticipants: 150, agenda: ['Welcome Reception', 'Alumni Spotlight Talks', 'Speed Networking Sessions', 'Industry Breakout Groups', 'Closing Mixer'] },
-    { id: 9,  title: 'Grant Writing Workshop',          description: 'Staff development session focused on effective grant proposal writing and securing research funding.',                                     date: '2025-04-28', time: '01:00 PM', location: 'Faculty Development Center',    type: 'private', participants: 22,  maxParticipants: 30,  agenda: ['Grant Landscape Overview', 'Proposal Structure & Components', 'Budget Development', 'Review & Feedback Session', 'Submission Best Practices'] },
-    { id: 10, title: 'Spring Music Festival',           description: 'Celebrate spring with live performances from student bands, orchestras, and solo artists. Food trucks and activities!',                   date: '2025-05-01', time: '12:00 PM', location: 'University Green',               type: 'public',  participants: 287, maxParticipants: 500, agenda: ['Opening Performance', 'Student Band Showcase', 'Food & Activities Break', 'Orchestra Performance', 'Headliner & Closing'] },
-    { id: 11, title: 'Cybersecurity Seminar',           description: 'Learn about the latest cybersecurity threats, protection strategies, and best practices for digital safety.',                             date: '2025-05-05', time: '02:00 PM', location: 'Tech Center Auditorium',         type: 'public',  participants: 56,  maxParticipants: 120, agenda: ['Current Threat Landscape', 'Password Security & 2FA', 'Phishing Prevention', 'Data Protection Strategies', 'Q&A with Security Experts'] },
-    { id: 12, title: 'Diversity & Inclusion Forum',     description: 'Open forum discussing diversity, equity, and inclusion initiatives on campus. All community members welcome.',                            date: '2025-05-10', time: '04:00 PM', location: 'Student Union, Room 201',        type: 'public',  participants: 103, maxParticipants: 150, agenda: ['Welcome & Overview', 'Panel Discussion', 'Breakout Sessions', 'Community Feedback', 'Action Items & Next Steps'] },
-    { id: 13, title: 'Academic Senate Meeting',         description: 'Monthly academic senate meeting for faculty representatives to discuss curriculum and policy matters.',                                   date: '2025-05-12', time: '03:00 PM', location: 'Senate Chambers, Admin Building', type: 'private', participants: 28,  maxParticipants: 40,  agenda: ['Previous Minutes Approval', 'Curriculum Committee Report', 'New Course Proposals', 'Policy Updates', 'Open Discussion'] },
-    { id: 14, title: 'Entrepreneurship Pitch Competition', description: 'Student startups pitch their business ideas to judges and investors. $10,000 in prizes available!',                                  date: '2025-05-18', time: '10:00 AM', location: 'Business School Auditorium',    type: 'public',  participants: 125, maxParticipants: 200, agenda: ['Competition Rules & Format', 'Pitch Round 1 (10 teams)', 'Break & Networking', 'Pitch Round 2 (Finalists)', 'Winner Announcement'] },
-    { id: 15, title: 'Summer Research Kickoff',         description: 'Launch event for summer research programs featuring presentations from research leads and team assignments.',                              date: '2025-05-25', time: '09:00 AM', location: 'Research Building, Main Hall',   type: 'public',  participants: 71,  maxParticipants: 100, agenda: ['Program Overview', 'Research Project Presentations', 'Lab Tours', 'Team Assignments', 'Safety Training & Resources'] }
-];
+const getAccessToken  = () => localStorage.getItem('access_token');
+const getRefreshToken = () => localStorage.getItem('refresh_token');
+const saveTokens = (access, refresh) => {
+    localStorage.setItem('access_token', access);
+    localStorage.setItem('refresh_token', refresh);
+};
+const clearTokens = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+};
+const authHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${getAccessToken()}`,
+});
 
+// Map a backend Event object to the shape expected by the UI
+const normalizeEvent = (ev) => {
+    const startDt   = ev.start_date ? new Date(ev.start_date) : null;
+    const dateStr   = startDt ? startDt.toISOString().split('T')[0] : '';
+    const timeStr   = startDt
+        ? startDt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        : '';
+    const location  = [ev.building, ev.floor ? `Floor ${ev.floor}` : null, ev.room]
+        .filter(Boolean).join(', ') || ev.organizer_side || '';
+    return {
+        id:              ev.id,
+        title:           ev.title,
+        description:     ev.desc || '',
+        date:            dateStr,
+        time:            timeStr,
+        location:        location,
+        type:            ev.visibility || 'public',
+        participants:    ev.participant_count || 0,
+        maxParticipants: ev.max_participants  || 0,
+        agenda:          (ev.agendas || []).map(a => a.action),
+    };
+};
 
-
+// ---------------------------------------------------------------------------
+// App component
+// ---------------------------------------------------------------------------
 function App() {
     const [currentUser, setCurrentUser]           = useState(null);
     const [currentPage, setCurrentPage]           = useState('home');
-    const [events, setEvents]                     = useState(MOCK_EVENTS);
+    const [events, setEvents]                     = useState([]);
     const [filter, setFilter]                     = useState('all');
     const [selectedEvent, setSelectedEvent]       = useState(null);
     const [showModal, setShowModal]               = useState(false);
     const [showCreateModal, setShowCreateModal]   = useState(false);
     const [registeredEvents, setRegisteredEvents] = useState([]);
     const [authPage, setAuthPage]                 = useState('login');
-    const [pendingUser, setPendingUser]           = useState(null);   
+    const [pendingUser, setPendingUser]           = useState(null);
 
-    const handleLogin = (email, password) => {
-        const user = MOCK_USERS.find(u => u.email === email && u.password === password);
-        if (user) { setCurrentUser(user); setCurrentPage('events'); return true; }
+    // Restore session on page load
+    useEffect(() => {
+        const token = getAccessToken();
+        if (token) {
+            const stored = localStorage.getItem('current_user');
+            if (stored) {
+                setCurrentUser(JSON.parse(stored));
+                setCurrentPage('events');
+            }
+        }
+    }, []);
+
+    // Fetch events whenever the user logs in
+    useEffect(() => {
+        if (currentUser) fetchEvents();
+    }, [currentUser]);
+
+    const fetchEvents = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/events/`, { headers: authHeaders() });
+            if (res.ok) {
+                const data = await res.json();
+                setEvents(data.map(normalizeEvent));
+            }
+        } catch (err) {
+            console.error('Failed to load events:', err);
+        }
+    };
+
+    const handleLogin = async (username, password) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/login/`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ username, password }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                saveTokens(data.tokens.access, data.tokens.refresh);
+                const user = { name: username, username, role: data.is_staff ? 'admin' : 'student' };
+                localStorage.setItem('current_user', JSON.stringify(user));
+                setCurrentUser(user);
+                setCurrentPage('events');
+                return true;
+            }
+        } catch (err) {
+            console.error('Login error:', err);
+        }
         return false;
     };
 
-    const handleRegisterOtp = (userData) => {
-        setPendingUser(userData);
-        setAuthPage('register-otp');
+    const handleRegisterOtp = async (userData) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/register/`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    username: userData.username,
+                    email:    userData.email,
+                    phone:    userData.phone,
+                    password: userData.password,
+                }),
+            });
+            if (res.ok) {
+                setPendingUser({
+                    email:    userData.email,
+                    name:     userData.username,
+                    username: userData.username,
+                    phone:    userData.phone,
+                    password: userData.password,
+                });
+                setAuthPage('register-otp');
+                return { success: true };
+            }
+            const errData = await res.json();
+            return { success: false, errors: errData };
+        } catch (err) {
+            console.error('Register error:', err);
+            return { success: false, errors: { non_field_errors: ['Network error. Please try again.'] } };
+        }
     };
 
-    const handleRegisterComplete = () => {
-        setCurrentUser(pendingUser);
-        setCurrentPage('events');
-        setPendingUser(null);
+    const handleRegisterComplete = async (otp) => {        try {
+            const res = await fetch(`${API_BASE}/api/verify-otp/`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ email: pendingUser.email, otp }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                saveTokens(data.tokens.access, data.tokens.refresh);
+                const user = { name: pendingUser.username, username: pendingUser.username, role: 'student' };
+                localStorage.setItem('current_user', JSON.stringify(user));
+                setCurrentUser(user);
+                setCurrentPage('events');
+                setPendingUser(null);
+                return true;
+            }
+        } catch (err) {
+            console.error('OTP verify error:', err);
+        }
+        return false;
     };
 
-    const handleLogout = () => {
+    const handleResendOtp = async () => {
+        if (!pendingUser) return { success: false };
+        try {
+            const res = await fetch(`${API_BASE}/api/register/`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    username: pendingUser.username,
+                    email:    pendingUser.email,
+                    phone:    pendingUser.phone,
+                    password: pendingUser.password,
+                }),
+            });
+            return { success: res.ok };
+        } catch (err) {
+            console.error('Resend OTP error:', err);
+            return { success: false };
+        }
+    };
+
+    const handleLogout = async () => {
+        const refreshToken = getRefreshToken();
+        if (refreshToken) {
+            try {
+                await fetch(`${API_BASE}/api/logout/`, {
+                    method:  'POST',
+                    headers: authHeaders(),
+                    body:    JSON.stringify({ refresh: refreshToken }),
+                });
+            } catch (err) { /* ignore */ }
+        }
+        clearTokens();
+        localStorage.removeItem('current_user');
         setCurrentUser(null);
         setCurrentPage('home');
         setAuthPage('login');
         setPendingUser(null);
         setRegisteredEvents([]);
+        setEvents([]);
     };
 
-    const handleEventRegister = (eventId) => {
-        if (!registeredEvents.includes(eventId)) {
-            setRegisteredEvents([...registeredEvents, eventId]);
-            setEvents(events.map(e => e.id === eventId ? { ...e, participants: e.participants + 1 } : e));
+    const handleEventRegister = async (eventId) => {
+        if (registeredEvents.includes(eventId)) return;
+        try {
+            const res = await fetch(`${API_BASE}/api/allowed-participants/`, {
+                method:  'POST',
+                headers: authHeaders(),
+                body:    JSON.stringify({ event: eventId }),
+            });
+            if (res.ok) {
+                setRegisteredEvents([...registeredEvents, eventId]);
+                setEvents(events.map(e => e.id === eventId ? { ...e, participants: e.participants + 1 } : e));
+            }
+        } catch (err) {
+            console.error('Register for event error:', err);
         }
     };
 
     const handleUnregister = (eventId) => {
+        // Optimistically remove from local state; counts re-sync on next fetchEvents
         setRegisteredEvents(registeredEvents.filter(id => id !== eventId));
         setEvents(events.map(e => e.id === eventId ? { ...e, participants: Math.max(0, e.participants - 1) } : e));
     };
 
-    const handleCreateEvent = (newEvent) => {
-        setEvents([{ ...newEvent, id: events.length + 1, participants: 0 }, ...events]);
-        setShowCreateModal(false);
+    const handleCreateEvent = async (formData) => {
+        try {
+            const start_date = formData.date && formData.time
+                ? `${formData.date}T${formData.time}:00`
+                : formData.date;
+            const res = await fetch(`${API_BASE}/api/events/`, {
+                method:  'POST',
+                headers: authHeaders(),
+                body:    JSON.stringify({
+                    title:            formData.title,
+                    desc:             formData.description,
+                    type:             'offline',
+                    visibility:       formData.type,
+                    start_date,
+                    room:             formData.location,
+                    max_participants: parseInt(formData.maxParticipants, 10) || null,
+                }),
+            });
+            if (res.ok) {
+                const newEvent = await res.json();
+                setEvents([normalizeEvent(newEvent), ...events]);
+                setShowCreateModal(false);
+            }
+        } catch (err) {
+            console.error('Create event error:', err);
+        }
     };
 
     const filteredEvents = filter === 'all' ? events : events.filter(e => e.type === filter);
@@ -93,7 +267,7 @@ function App() {
                 : authPage === 'forgot'
                     ? <ForgotPasswordPage onBack={() => setAuthPage('login')} />
                 : authPage === 'register-otp'
-                    ? <RegisterOtpPage email={pendingUser?.email} onVerified={handleRegisterComplete} onBack={() => setAuthPage('login')} />
+                    ? <RegisterOtpPage email={pendingUser?.email} onVerified={handleRegisterComplete} onResend={handleResendOtp} onBack={() => setAuthPage('login')} />
                 : null
             ) : (
                 <div className="main-content">
@@ -107,7 +281,7 @@ function App() {
                         />
                     )}
                     {currentPage === 'calendar' && <CalendarPage events={events} />}
-                    {currentPage === 'admin' && currentUser.role === 'admin' && <AdminPage events={events} users={MOCK_USERS} />}
+                    {currentPage === 'admin' && currentUser.role === 'admin' && <AdminPage events={events} users={currentUser ? [currentUser] : []} />}
                     {showModal && selectedEvent && (
                         <EventModal
                             event={selectedEvent}
@@ -146,10 +320,11 @@ function Navbar({ currentUser, currentPage, setCurrentPage, onLogout }) {
 
 function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
     const [isRegister, setIsRegister]           = useState(false);
+    const [username, setUsername]               = useState('');
     const [email, setEmail]                     = useState('');
+    const [phone, setPhone]                     = useState('');
     const [password, setPassword]               = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [fullName, setFullName]               = useState('');
     const [showPass, setShowPass]               = useState(false);
     const [showConfirm, setShowConfirm]         = useState(false);
     const [error, setError]                     = useState('');
@@ -170,36 +345,36 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
     const switchMode = () => {
         setIsRegister(!isRegister);
         setError('');
+        setUsername('');
+        setEmail('');
+        setPhone('');
         setPassword('');
         setConfirmPassword('');
-        setFullName('');
         setShowPass(false);
         setShowConfirm(false);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
         if (isRegister) {
-            if (!fullName.trim())           { setError('Please enter your full name'); return; }
-            if (password.length < 8)        { setError('Password must be at least 8 characters'); return; }
-            if (password !== confirmPassword){ setError('Passwords do not match'); return; }
+            if (!username.trim())            { setError('Please enter a username'); return; }
+            if (!phone.trim())               { setError('Please enter your phone number'); return; }
+            if (password.length < 8)         { setError('Password must be at least 8 characters'); return; }
+            if (password !== confirmPassword) { setError('Passwords do not match'); return; }
             setLoading(true);
-
-            setTimeout(() => {
-                setLoading(false);
-                onRegisterOtp({ email, name: fullName, role: 'student' });
-            }, 700);
+            const result = await onRegisterOtp({ username, email, phone, password });
+            setLoading(false);
+            if (!result.success) {
+                const msgs = Object.values(result.errors || {}).flat();
+                setError(msgs.length ? msgs[0] : 'Registration failed. Please try again.');
+            }
         } else {
-            
-
             setLoading(true);
-            setTimeout(() => {
-                const success = onLogin(email, password);
-                if (!success) setError('Invalid email or password');
-                setLoading(false);
-            }, 600);
+            const success = await onLogin(username, password);
+            setLoading(false);
+            if (!success) setError('Invalid username or password');
         }
     };
 
@@ -262,28 +437,42 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
 
                     <form onSubmit={handleSubmit}>
 
-                        {/* Full name — only on register */}
+                        {/* Username — always shown */}
+                        <div className="form-group">
+                        <label className="form-label">Username</label>
+                            <input
+                                type="text" className="form-input"
+                                placeholder={isRegister ? 'Choose a username' : 'Enter your username'}
+                                value={username} onChange={(e) => setUsername(e.target.value)}
+                                required disabled={loading}
+                            />
+                        </div>
+
+                        {/* University Email — only on register */}
                         {isRegister && (
                             <div className="form-group">
-                                <label className="form-label">Full Name</label>
+                                <label className="form-label">University Email</label>
                                 <input
-                                    type="text" className="form-input"
-                                    placeholder="Your full name"
-                                    value={fullName} onChange={(e) => setFullName(e.target.value)}
+                                    type="email" className="form-input"
+                                    placeholder="your@beu.edu.az"
+                                    value={email} onChange={(e) => setEmail(e.target.value)}
                                     required disabled={loading}
                                 />
                             </div>
                         )}
 
-                        <div className="form-group">
-                            <label className="form-label">University Email</label>
-                            <input
-                                type="email" className="form-input"
-                                placeholder="your@email.com"
-                                value={email} onChange={(e) => setEmail(e.target.value)}
-                                required disabled={loading}
-                            />
-                        </div>
+                        {/* Phone — only on register */}
+                        {isRegister && (
+                            <div className="form-group">
+                                <label className="form-label">Phone Number</label>
+                                <input
+                                    type="tel" className="form-input"
+                                    placeholder="+994XXXXXXXXX"
+                                    value={phone} onChange={(e) => setPhone(e.target.value)}
+                                    required disabled={loading}
+                                />
+                            </div>
+                        )}
 
                         {/* Password with show/hide toggle */}
                         <div className="form-group">
@@ -358,14 +547,9 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
                         <a className="auth-link" onClick={switchMode}>{isRegister ? 'Sign In' : 'Register'}</a>
                     </div>
 
-                    {!isRegister && (
-                        <div style={{ marginTop: '2rem', padding: '1.25rem', background: 'linear-gradient(135deg,rgba(102,126,234,0.05),rgba(118,75,162,0.05))', borderRadius: '12px', fontSize: '0.9rem', border: '1px solid rgba(102,126,234,0.1)' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: '#667eea' }}>🔐 Demo Accounts:</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', color: '#666' }}>
-                                <div><strong>Student:</strong> student@university.edu / student123</div>
-                                <div><strong>Staff:</strong> staff@university.edu / staff123</div>
-                                <div><strong>Admin:</strong> admin@university.edu / admin123</div>
-                            </div>
+                    {isRegister && (
+                        <div style={{ marginTop: '1.5rem', padding: '1rem 1.25rem', background: 'rgba(102,126,234,0.05)', borderRadius: '12px', fontSize: '0.88rem', border: '1px solid rgba(102,126,234,0.15)', color: '#666' }}>
+                            ℹ️ Registration requires a university email (<strong>@beu.edu.az</strong> or <strong>@std.beu.edu.az</strong>). A 6-digit OTP will be sent to verify your address.
                         </div>
                     )}
                 </div>
@@ -405,25 +589,54 @@ function ForgotPasswordPage({ onBack }) {
     const strengthColor = ['', '#e94560', '#f39c12', '#3498db', '#2ecc71'];
     const strength = getStrength(newPassword);
 
-    const handleSendCode = (e) => {
+    const handleSendCode = async (e) => {
         e.preventDefault(); setError('');
         setLoading(true);
-        setTimeout(() => { setLoading(false); setStep('code'); setResendTimer(60); }, 800);
+        try {
+            const res = await fetch(`${API_BASE}/api/forgot-password/`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ email }),
+            });
+            if (res.ok) {
+                setStep('code'); setResendTimer(60);
+            } else {
+                const data = await res.json();
+                setError(Object.values(data).flat()[0] || 'Failed to send code');
+            }
+        } catch (err) {
+            setError('Network error. Please try again.');
+        }
+        setLoading(false);
     };
 
     const handleVerifyCode = (e) => {
         e.preventDefault(); setError('');
         if (code.join('').length < 6) { setError('Please enter the full 6-digit code'); return; }
-        setLoading(true);
-        setTimeout(() => { setLoading(false); setStep('newpass'); }, 800);
+        setStep('newpass');
     };
 
-    const handleResetPassword = (e) => {
+    const handleResetPassword = async (e) => {
         e.preventDefault(); setError('');
         if (newPassword.length < 8)          { setError('Password must be at least 8 characters'); return; }
         if (newPassword !== confirmPassword)  { setError('Passwords do not match'); return; }
         setLoading(true);
-        setTimeout(() => { setLoading(false); setStep('done'); }, 800);
+        try {
+            const res = await fetch(`${API_BASE}/api/reset-password/`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ email, otp: code.join(''), new_password: newPassword }),
+            });
+            if (res.ok) {
+                setStep('done');
+            } else {
+                const data = await res.json();
+                setError(Object.values(data).flat()[0] || 'Failed to reset password');
+            }
+        } catch (err) {
+            setError('Network error. Please try again.');
+        }
+        setLoading(false);
     };
 
     const handleCodeChange = (val, idx) => {
@@ -604,7 +817,7 @@ function ForgotPasswordPage({ onBack }) {
 
 
 
-function RegisterOtpPage({ email, onVerified, onBack }) {
+function RegisterOtpPage({ email, onVerified, onBack, onResend }) {
     const [code, setCode]             = useState(['', '', '', '', '', '']);
     const [error, setError]           = useState('');
     const [success, setSuccess]       = useState('');
@@ -628,23 +841,33 @@ function RegisterOtpPage({ email, onVerified, onBack }) {
             document.getElementById(`reg-otp-${idx - 1}`)?.focus();
     };
 
-    const handleVerify = (e) => {
+    const handleVerify = async (e) => {
         e.preventDefault();
         setError('');
         const fullCode = code.join('');
         if (fullCode.length < 6) { setError('Please enter the full 6-digit code'); return; }
         setLoading(true);
-        setTimeout(() => {
+        const success = await onVerified(fullCode);
+        if (!success) {
+            setError('Invalid or expired OTP. Please try again.');
             setLoading(false);
-            onVerified();
-        }, 800);
+        }
     };
 
-    const handleResend = () => {
+    const handleResend = async () => {
         if (resendTimer > 0) return;
         setCode(['', '', '', '', '', '']);
         setError('');
-        setSuccess('A new code has been sent!');
+        try {
+            const res = await onResend();
+            if (res && res.success) {
+                setSuccess('A new code has been sent!');
+            } else {
+                setError('Failed to resend code. Please try again.');
+            }
+        } catch (err) {
+            setError('Network error. Please try again.');
+        }
         setResendTimer(60);
     };
 
