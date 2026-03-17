@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, BasePermission, AllowAny
 from rest_framework.decorators import action
@@ -16,7 +16,8 @@ from .models import (
 from .serializers import (
     RegisterSerializer, VerifyOTPSerializer, LoginSerializer, LogoutSerializer,
     ForgotPasswordSerializer, ResetPasswordSerializer,
-    RoleSerializer, EventSerializer, EventImageSerializer, EventAgendaSerializer
+    RoleSerializer, EventSerializer, EventImageSerializer, EventAgendaSerializer,
+    AllowedParticipantSerializer # BU SERIALIZER-İ SERIALIZERS.PY-A ƏLAVƏ ETMƏYİ UNUTMA
 )
 
 def get_tokens(user):
@@ -85,8 +86,6 @@ class LogoutAPI(GenericAPIView):
             except: pass
         return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
-# --- ŞİFRƏNİ UNUTDUM HİSSƏSİ (BU HİSSƏSƏ GÖRƏ XƏTA VERİRDİ) ---
-
 class ForgotPasswordAPI(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = ForgotPasswordSerializer
@@ -128,12 +127,20 @@ class RoleViewSet(viewsets.ModelViewSet):
 
 class EventViewSet(viewsets.ModelViewSet):
     serializer_class = EventSerializer
-    permission_classes = [IsAuthenticated, IsActiveUser]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsActiveUser(), permissions.IsAdminUser()]
+        return [IsAuthenticated(), IsActiveUser()]
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff or user.is_superuser: return Event.objects.all()
-        return Event.objects.filter(Q(visibility='public') | Q(visibility='private', allowed_participants__email=user.email)).distinct()
+        if user.is_staff or user.is_superuser: 
+            return Event.objects.all()
+        return Event.objects.filter(
+            Q(visibility='public') | 
+            Q(visibility='private', allowed_participants__email=user.email)
+        ).distinct()
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -148,3 +155,17 @@ class EventImageViewSet(viewsets.ModelViewSet):
     queryset = EventImage.objects.all()
     serializer_class = EventImageSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
+
+# YENİ: İŞTİRAKÇI QEYDİYYATI (JOIN EVENT)
+class AllowedParticipantViewSet(viewsets.ModelViewSet):
+    queryset = AllowedParticipant.objects.all()
+    serializer_class = AllowedParticipantSerializer
+    permission_classes = [IsAuthenticated, IsActiveUser]
+
+    def perform_create(self, serializer):
+        # Əgər tələbə özü qoşulursa, sistem avtomatik onun emailini götürür
+        if not self.request.user.is_staff:
+            serializer.save(email=self.request.user.email)
+        else:
+            # Staff-dırsa, başqasını da əlavə edə bilər (email daxil etməklə)
+            serializer.save()

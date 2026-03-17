@@ -2,7 +2,6 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, Role, Event, EventImage, EventAgenda, AllowedParticipant
 
-
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
@@ -19,7 +18,6 @@ class CustomUserAdmin(UserAdmin):
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
-
 class EventImageInline(admin.TabularInline):
     model = EventImage
     extra = 1
@@ -32,10 +30,8 @@ class AllowedParticipantInline(admin.TabularInline):
     model = AllowedParticipant
     extra = 5  
 
-
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-   
     list_display = (
         'title', 
         'type', 
@@ -43,7 +39,7 @@ class EventAdmin(admin.ModelAdmin):
         'building', 
         'room', 
         'start_date', 
-        'participant_count'
+        'participant_count' # List display-də qala bilər
     )
 
     list_filter = (
@@ -60,10 +56,10 @@ class EventAdmin(admin.ModelAdmin):
         'room'
     )
 
-    readonly_fields = ('created_by',)
+    # VACİB DÜZƏLİŞ: participant_count readonly olmalıdır!
+    readonly_fields = ('created_by', 'participant_count') 
     ordering = ('-created_date',)
     filter_horizontal = ('allowed_roles',)
-    
     
     inlines = [EventImageInline, EventAgendaInline, AllowedParticipantInline]
 
@@ -81,15 +77,15 @@ class EventAdmin(admin.ModelAdmin):
             'fields': ('allowed_roles', 'max_participants')
         }),
         ('Statistics', {
-            'fields': ('participant_count',),
+            'fields': ('participant_count',), # readonly_fields-də olduğu üçün xəta verməyəcək
             'classes': ('collapse',) 
         }),
     )
+
     def save_model(self, request, obj, form, change):
         if not obj.pk:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
-
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):

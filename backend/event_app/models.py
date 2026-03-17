@@ -11,7 +11,7 @@ class Role(models.Model):
 
 
 class CustomUser(AbstractUser):
-    phone = models.CharField(max_length=15, unique=True)
+    phone = models.CharField(max_length=15)
     email = models.EmailField(unique=True)
     otp = models.CharField(max_length=6, blank=True, null=True)
     otp_created_at = models.DateTimeField(blank=True, null=True)
@@ -20,7 +20,6 @@ class CustomUser(AbstractUser):
 
     def otp_is_valid(self):
         if self.otp_created_at:
-           
             return (timezone.now() - self.otp_created_at).seconds < 300
         return False
 
@@ -40,7 +39,6 @@ class Event(models.Model):
     title = models.CharField(max_length=255)
     desc = models.TextField()
     
-    
     building = models.CharField(max_length=100, blank=True, null=True, help_text="Məsələn: Əsas korpus")
     floor = models.IntegerField(blank=True, null=True)
     room = models.CharField(max_length=50, blank=True, null=True, help_text="Məsələn: 302 və ya Akt zalı")
@@ -56,8 +54,13 @@ class Event(models.Model):
     end_date = models.DateTimeField(blank=True, null=True) 
     created_date = models.DateTimeField(auto_now_add=True)
     
-    participant_count = models.PositiveIntegerField(default=0)
+    
     max_participants = models.PositiveIntegerField(null=True, blank=True)
+
+   
+    @property
+    def participant_count(self):
+        return self.allowed_participants.count()
 
     def is_expired(self):
         return self.end_date and timezone.now() > self.end_date

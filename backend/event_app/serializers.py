@@ -11,12 +11,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('username', 'email', 'phone', 'password')
 
-    
     def validate_email(self, value):
-        
         allowed_domains = ['beu.edu.az', 'std.beu.edu.az']
-        
-        
         whitelist_emails = ['senin_test_emailin@gmail.com'] 
 
         email_domain = value.split('@')[-1].lower()
@@ -37,8 +33,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
-
-
 
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -94,3 +88,11 @@ class EventSerializer(serializers.ModelSerializer):
             'max_participants'
         ]
         read_only_fields = ['created_by', 'created_date', 'participant_count']
+
+
+class AllowedParticipantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AllowedParticipant
+        fields = ['id', 'event', 'email', 'group_name']
+       
+        read_only_fields = ['email']
