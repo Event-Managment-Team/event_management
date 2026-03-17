@@ -1,6 +1,5 @@
 const { useState, useEffect } = React;
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const MOCK_USERS = [
     { username: 'student', password: 'student123', role: 'student', name: 'Alex Johnson' },
@@ -27,7 +26,6 @@ const MOCK_EVENTS = [
 ];
 
 
-// ─── App Component ────────────────────────────────────────────────────────────
 
 function App() {
     const [currentUser, setCurrentUser]           = useState(null);
@@ -47,13 +45,11 @@ function App() {
         return false;
     };
 
-    // Called after register form submit — go to OTP verification
     const handleRegisterOtp = (userData) => {
         setPendingUser(userData);
         setAuthPage('register-otp');
     };
 
-    // Called after OTP verified on register
     const handleRegisterComplete = () => {
         setCurrentUser(pendingUser);
         setCurrentPage('events');
@@ -129,7 +125,6 @@ function App() {
     );
 }
 
-// ─── Navbar ───────────────────────────────────────────────────────────────────
 
 function Navbar({ currentUser, currentPage, setCurrentPage, onLogout }) {
     return (
@@ -149,7 +144,6 @@ function Navbar({ currentUser, currentPage, setCurrentPage, onLogout }) {
     );
 }
 
-// ─── Login Page ───────────────────────────────────────────────────────────────
 
 function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
     const [isRegister, setIsRegister]           = useState(false);
@@ -162,7 +156,6 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
     const [error, setError]                     = useState('');
     const [loading, setLoading]                 = useState(false);
 
-    // Password strength — same logic as ForgotPasswordPage
     const getStrength = (p) => {
         let s = 0;
         if (p.length >= 8)           s++;
@@ -191,20 +184,16 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
         setError('');
 
         if (isRegister) {
-            // Validate register fields
             if (!fullName.trim())           { setError('Please enter your full name'); return; }
             if (!username.trim())           { setError('Please enter a username'); return; }
             if (password.length < 8)        { setError('Password must be at least 8 characters'); return; }
             if (password !== confirmPassword){ setError('Passwords do not match'); return; }
             setLoading(true);
-            // TODO: replace with → fetch('/auth/register', { method:'POST', body: JSON.stringify({ name: fullName, username, email, password }) })
-            // On success backend sends OTP to email, we move to OTP verification step
             setTimeout(() => {
                 setLoading(false);
                 onRegisterOtp({ username, name: fullName, role: 'student' });
             }, 700);
         } else {
-            // Login flow
             if (!username.trim()) { setError('Please enter your username'); return; }
             setLoading(true);
             setTimeout(() => {
@@ -274,7 +263,6 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
 
                     <form onSubmit={handleSubmit}>
 
-                        {/* Full name — only on register */}
                         {isRegister && (
                             <div className="form-group">
                                 <label className="form-label">Full Name</label>
@@ -287,7 +275,6 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
                             </div>
                         )}
 
-                        {/* Username — always shown */}
                         <div className="form-group">
                             <label className="form-label">Username</label>
                             <input
@@ -301,7 +288,6 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
 
 
 
-                        {/* Password with show/hide toggle */}
                         <div className="form-group">
                             <label className="form-label">Password</label>
                             <div style={{ position: 'relative' }}>
@@ -318,7 +304,6 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
                                 </button>
                             </div>
 
-                            {/* Strength bar — only on register */}
                             {isRegister && password.length > 0 && (
                                 <div style={{ marginTop: '0.5rem' }}>
                                     <div style={{ display: 'flex', gap: 4, marginBottom: '0.25rem' }}>
@@ -331,7 +316,6 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
                             )}
                         </div>
 
-                        {/* Confirm password — only on register */}
                         {isRegister && (
                             <div className="form-group">
                                 <label className="form-label">Confirm Password</label>
@@ -357,7 +341,6 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
                             </div>
                         )}
 
-                        {/* Forgot password — only on login */}
                         {!isRegister && (
                             <div style={{ textAlign: 'right', marginBottom: '1.25rem', marginTop: '-0.5rem' }}>
                                 <a className="auth-link" onClick={onForgotPassword} style={{ fontSize: '0.9rem' }}>Forgot password?</a>
@@ -390,8 +373,7 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
     );
 }
 
-// ─── Forgot Password Page ─────────────────────────────────────────────────────
-// Step 1: email  →  Step 2: verify code  →  Step 3: new password  →  done
+
 
 function ForgotPasswordPage({ onBack }) {
     const [step, setStep]                       = useState('email');
@@ -426,7 +408,7 @@ function ForgotPasswordPage({ onBack }) {
     const handleSendCode = (e) => {
         e.preventDefault(); setError('');
         setLoading(true);
-        // TODO: replace with → fetch('/auth/forgot-password', { method:'POST', body: JSON.stringify({ email }) })
+       
         setTimeout(() => { setLoading(false); setStep('code'); setResendTimer(60); }, 800);
     };
 
@@ -434,7 +416,6 @@ function ForgotPasswordPage({ onBack }) {
         e.preventDefault(); setError('');
         if (code.join('').length < 6) { setError('Please enter the full 6-digit code'); return; }
         setLoading(true);
-        // TODO: replace with → fetch('/auth/verify-reset-code', { method:'POST', body: JSON.stringify({ email, code: code.join('') }) })
         setTimeout(() => { setLoading(false); setStep('newpass'); }, 800);
     };
 
@@ -443,7 +424,6 @@ function ForgotPasswordPage({ onBack }) {
         if (newPassword.length < 8)          { setError('Password must be at least 8 characters'); return; }
         if (newPassword !== confirmPassword)  { setError('Passwords do not match'); return; }
         setLoading(true);
-        // TODO: replace with → fetch('/auth/reset-password', { method:'POST', body: JSON.stringify({ email, password: newPassword }) })
         setTimeout(() => { setLoading(false); setStep('done'); }, 800);
     };
 
@@ -458,7 +438,6 @@ function ForgotPasswordPage({ onBack }) {
     const handleResend = () => {
         if (resendTimer > 0) return;
         setCode(['', '', '', '', '', '']); setError(''); setResendTimer(60);
-        // TODO: replace with → fetch('/auth/forgot-password', ...)
     };
 
     const stepKeys = ['email', 'code', 'newpass'];
@@ -624,8 +603,7 @@ function ForgotPasswordPage({ onBack }) {
 }
 
 
-// ─── Register OTP Page ────────────────────────────────────────────────────────
-// Shown after register form submit — user must verify their email with OTP
+
 
 function RegisterOtpPage({ email, onVerified, onBack }) {
     const [code, setCode]             = useState(['', '', '', '', '', '']);
@@ -657,7 +635,6 @@ function RegisterOtpPage({ email, onVerified, onBack }) {
         const fullCode = code.join('');
         if (fullCode.length < 6) { setError('Please enter the full 6-digit code'); return; }
         setLoading(true);
-        // TODO: replace with → fetch('/auth/verify-email', { method:'POST', body: JSON.stringify({ email, otp: fullCode }) })
         setTimeout(() => {
             setLoading(false);
             onVerified();
@@ -670,7 +647,6 @@ function RegisterOtpPage({ email, onVerified, onBack }) {
         setError('');
         setSuccess('A new code has been sent!');
         setResendTimer(60);
-        // TODO: replace with → fetch('/auth/resend-otp', { method:'POST', body: JSON.stringify({ email }) })
     };
 
     return (
@@ -780,7 +756,6 @@ function RegisterOtpPage({ email, onVerified, onBack }) {
     );
 }
 
-// ─── Events Page ──────────────────────────────────────────────────────────────
 
 function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, onRegister, onUnregister, onEventClick, onCreateClick }) {
     return (
@@ -807,7 +782,6 @@ function EventsPage({ events, filter, setFilter, currentUser, registeredEvents, 
     );
 }
 
-// ─── Event Card ───────────────────────────────────────────────────────────────
 
 function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     return (
@@ -834,7 +808,6 @@ function EventCard({ event, isRegistered, onRegister, onUnregister, onClick }) {
     );
 }
 
-// ─── Event Modal ──────────────────────────────────────────────────────────────
 
 function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) {
     return (
@@ -883,7 +856,6 @@ function EventModal({ event, isRegistered, onClose, onRegister, onUnregister }) 
     );
 }
 
-// ─── Calendar Page ────────────────────────────────────────────────────────────
 
 function CalendarPage({ events }) {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -926,7 +898,6 @@ function CalendarPage({ events }) {
     );
 }
 
-// ─── Create Event Modal ───────────────────────────────────────────────────────
 
 function CreateEventModal({ onClose, onCreate }) {
     const [formData, setFormData]             = useState({ title: '', description: '', date: '', time: '', location: '', type: 'public', maxParticipants: 100 });
@@ -994,7 +965,6 @@ function CreateEventModal({ onClose, onCreate }) {
     );
 }
 
-// ─── Admin Page ───────────────────────────────────────────────────────────────
 
 function AdminPage({ events, users }) {
     const totalEvents       = events.length;
@@ -1061,6 +1031,5 @@ function AdminPage({ events, users }) {
     );
 }
 
-// ─── Render ───────────────────────────────────────────────────────────────────
 
 ReactDOM.render(<App />, document.getElementById('root'));
