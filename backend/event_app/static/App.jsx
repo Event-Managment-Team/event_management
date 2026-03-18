@@ -285,7 +285,7 @@ function App() {
             <header className="topbar">
                 <div>
                     <p className="eyebrow">Event Management</p>
-                    <h1>Campus Event Hub</h1>
+                    <h1>LinkEvent</h1>
                 </div>
                 <div className="topbar-actions">
                     <p className="user-badge">{user?.username || 'User'}</p>
