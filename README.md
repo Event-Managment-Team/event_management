@@ -49,11 +49,11 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 w
-The API will be available at http://127.0.0.1:8000/
+The API will be available at http://127.0.0.1:port/
 
-- **Swagger UI:** http://127.0.0.1:8000/swagger/
-- **ReDoc:** http://127.0.0.1:8000/redoc/
-- **Admin Panel:** http://127.0.0.1:8000/admin/
+- **Swagger UI:** http://127.0.0.1:port/swagger/
+- **ReDoc:** http://127.0.0.1:port/redoc/
+- **Admin Panel:** http://127.0.0.1:port/admin/
 
 ### Frontend Setup
 
