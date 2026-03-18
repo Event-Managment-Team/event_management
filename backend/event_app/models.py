@@ -22,6 +22,8 @@ class CustomUser(AbstractUser):
         if self.otp_created_at:
             return (timezone.now() - self.otp_created_at).seconds < 300
         return False
+    
+    REQUIRED_FIELDS = ['email', 'phone']
 
 
 class Event(models.Model):
