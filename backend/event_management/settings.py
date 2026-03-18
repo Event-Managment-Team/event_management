@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-=z(hqedy8ctol!1!72+_*0^kb@decfs9)_s^k&x#xib0$(1@h$'
 
 DEBUG = True
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 INSTALLED_APPS = [
@@ -21,6 +21,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'corsheaders',
     
     'rest_framework',  
     'rest_framework_simplejwt',
@@ -29,6 +31,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -115,3 +118,9 @@ DEFAULT_FROM_EMAIL = f'Event System <{EMAIL_HOST_USER}>'
 MEDIA_URL = '/media/' 
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media') #
+
+
+CORS_ALLOWED_ORIGINS = [
+    'http://127.0.0.1:5500',
+    'http://localhost:5500',
+]

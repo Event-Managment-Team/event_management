@@ -12,15 +12,25 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'phone', 'password')
 
     def validate_email(self, value):
-        allowed_domains = ['beu.edu.az', 'std.beu.edu.az']
-        whitelist_emails = ['senin_test_emailin@gmail.com'] 
+        whitelist_emails = ['senin_test_emailin@gmail.com']
 
-        email_domain = value.split('@')[-1].lower()
+        email_lower = value.lower()
 
-        if value not in whitelist_emails and email_domain not in allowed_domains:
+        if email_lower in whitelist_emails:
+            return value
+
+        try:
+            local_part, domain = email_lower.split('@', 1)
+        except ValueError:
+            # DRF's EmailField will normally catch format errors, but keep a safeguard.
+            raise serializers.ValidationError("Düzgün email formatı daxil edin.")
+
+        # Yalnız *.edu.az domeninə icazə ver (məsələn: name@beu.edu.az, user@uni.edu.az)
+        if not (local_part and domain.endswith('.edu.az') and domain != 'edu.az'):
             raise serializers.ValidationError(
-                "Qeydiyyat üçün yalnız universitet emaili tələb olunur (@beu.edu.az)."
+                "Qeydiyyat üçün yalnız universitet emaili tələb olunur (nümunə: ad@universitet.edu.az)."
             )
+
         return value
 
     def create(self, validated_data):
@@ -28,10 +38,15 @@ class RegisterSerializer(serializers.ModelSerializer):
             username=validated_data['username'],
             email=validated_data['email'],
             phone=validated_data['phone'],
-            is_active=False
+            is_active=False,
         )
         user.set_password(validated_data['password'])
         user.save()
+
+        # Hər yeni istifadəçiyə standart rol ver (məsələn, Student)
+        default_role, _ = Role.objects.get_or_create(name='Student')
+        user.roles.add(default_role)
+
         return user
 
 class VerifyOTPSerializer(serializers.Serializer):
@@ -76,18 +91,26 @@ class EventSerializer(serializers.ModelSerializer):
         required=False
     )
     images = EventImageSerializer(many=True, read_only=True)
-    agendas = EventAgendaSerializer(many=True, read_only=True) 
+    agendas = EventAgendaSerializer(many=True, read_only=True)
+    is_joined = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
         fields = [
             'id', 'title', 'desc', 'type', 'visibility', 'created_by',
             'building', 'floor', 'room', 'organizer_side',
-            'allowed_roles', 'allowed_roles_ids', 'images', 'agendas',
+            'allowed_roles', 'allowed_roles_ids', 'images', 'agendas', 'is_joined',
             'start_date', 'end_date', 'created_date', 'participant_count',
             'max_participants'
         ]
         read_only_fields = ['created_by', 'created_date', 'participant_count']
+
+    def get_is_joined(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not request or not user or not user.is_authenticated:
+            return False
+        return obj.allowed_participants.filter(email=user.email).exists()
 
 
 class AllowedParticipantSerializer(serializers.ModelSerializer):

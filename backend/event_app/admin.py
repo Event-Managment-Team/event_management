@@ -9,12 +9,13 @@ class CustomUserAdmin(UserAdmin):
     list_filter = ('is_staff', 'is_superuser', 'is_active')
     search_fields = ('username', 'email', 'phone')
     ordering = ('-date_joined',)
+    filter_horizontal = ('roles',)
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'email', 'phone')}),
         ('OTP Info', {'fields': ('otp', 'otp_created_at')}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'roles')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 

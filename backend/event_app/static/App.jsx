@@ -84,7 +84,6 @@ function App() {
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [joinedEventIds, setJoinedEventIds] = useState([]);
-    const [roles, setRoles] = useState([]);
 
     const accessToken = tokens?.access || null;
 
@@ -107,7 +106,6 @@ function App() {
     useEffect(() => {
         if (!accessToken) return;
         loadEvents();
-        loadRoles();
     }, [accessToken]);
 
     async function loadEvents() {
@@ -123,15 +121,6 @@ function App() {
         }
     }
 
-    async function loadRoles() {
-        try {
-            const data = await apiRequest('/api/roles/', {}, accessToken);
-            setRoles(Array.isArray(data) ? data : []);
-        } catch (err) {
-            // Rollar yüklənməsə də, event yaratmaq hələ də mümkündür.
-        }
-    }
-
     async function handleLogin(username, password) {
         setGlobalError('');
         setGlobalSuccess('');
@@ -140,11 +129,7 @@ function App() {
                 method: 'POST',
                 body: JSON.stringify({ username, password }),
             });
-            if (data.user) {
-                setUser(data.user);
-            } else {
-                setUser({ username });
-            }
+            setUser({ username });
             setTokens(data.tokens);
         } catch (err) {
             setGlobalError(`Login failed. ${err.message}`);
@@ -176,7 +161,7 @@ function App() {
                 body: JSON.stringify({ email: pendingEmail, otp }),
             });
             setTokens(data.tokens);
-            setUser({ username: pendingEmail.split('@')[0], is_staff: false, is_superuser: false });
+            setUser({ username: pendingEmail.split('@')[0] });
             setPendingEmail('');
             setAuthView('login');
             setGlobalSuccess('Account verified and signed in.');
@@ -305,9 +290,7 @@ function App() {
                 <div className="topbar-actions">
                     <p className="user-badge">{user?.username || 'User'}</p>
                     <button className="btn btn-ghost" onClick={loadEvents}>Refresh</button>
-                    {(user?.is_staff || user?.is_superuser) && (
-                        <button className="btn btn-outline" onClick={() => setShowCreateModal(true)}>Create Event</button>
-                    )}
+                    <button className="btn btn-outline" onClick={() => setShowCreateModal(true)}>Create Event</button>
                     <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
                 </div>
             </header>
@@ -331,7 +314,7 @@ function App() {
                         <EventCard
                             key={event.id}
                             event={event}
-                            isJoined={joinedEventIds.includes(event.id) || !!event.is_joined}
+                            isJoined={joinedEventIds.includes(event.id)}
                             onOpen={() => setSelectedEvent(event)}
                             onJoin={handleJoin}
                         />
@@ -342,7 +325,7 @@ function App() {
             {selectedEvent && (
                 <EventModal
                     event={selectedEvent}
-                    isJoined={joinedEventIds.includes(selectedEvent.id) || !!selectedEvent.is_joined}
+                    isJoined={joinedEventIds.includes(selectedEvent.id)}
                     onClose={() => setSelectedEvent(null)}
                     onJoin={handleJoin}
                 />
@@ -352,7 +335,6 @@ function App() {
                 <CreateEventModal
                     onClose={() => setShowCreateModal(false)}
                     onCreate={handleCreateEvent}
-                    roles={roles}
                 />
             )}
         </div>
@@ -648,7 +630,7 @@ function EventModal({ event, isJoined, onClose, onJoin }) {
     );
 }
 
-function CreateEventModal({ onClose, onCreate, roles }) {
+function CreateEventModal({ onClose, onCreate }) {
     const now = new Date();
     const nextHour = new Date(now.getTime() + 60 * 60 * 1000).toISOString().slice(0, 16);
     const nextTwoHours = new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16);
@@ -667,8 +649,6 @@ function CreateEventModal({ onClose, onCreate, roles }) {
         end_date: nextTwoHours,
     });
 
-    const [selectedRoleIds, setSelectedRoleIds] = useState([]);
-
     function change(e) {
         setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     }
@@ -679,7 +659,6 @@ function CreateEventModal({ onClose, onCreate, roles }) {
             ...form,
             floor: form.floor === '' ? null : Number(form.floor),
             max_participants: form.max_participants === '' ? null : Number(form.max_participants),
-            allowed_roles_ids: selectedRoleIds,
         };
         onCreate(payload);
     }
@@ -714,34 +693,6 @@ function CreateEventModal({ onClose, onCreate, roles }) {
                             <option value="private">private</option>
                         </select>
                     </label>
-
-                    {Array.isArray(roles) && roles.length > 0 && (
-                        <label className="full">
-                            Allowed Roles (private events)
-                            <div className="checkbox-list">
-                                {roles.map((role) => {
-                                    const checked = selectedRoleIds.includes(role.id);
-                                    return (
-                                        <label key={role.id} className="checkbox-item">
-                                            <input
-                                                type="checkbox"
-                                                checked={checked}
-                                                onChange={(e) => {
-                                                    setSelectedRoleIds((prev) => {
-                                                        if (e.target.checked) {
-                                                            return prev.concat(role.id);
-                                                        }
-                                                        return prev.filter((id) => id !== role.id);
-                                                    });
-                                                }}
-                                            />
-                                            {role.name}
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                        </label>
-                    )}
 
                     <label className="full">
                         Description

@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated, BasePermission, AllowAny
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate
@@ -68,10 +69,25 @@ class LoginAPI(GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            user = authenticate(username=serializer.validated_data["username"], password=serializer.validated_data["password"])
-            if user:
-                if not user.is_active: return Response({"error": "Verify OTP"}, status=status.HTTP_403_FORBIDDEN)
-                return Response({"tokens": get_tokens(user)}, status=status.HTTP_200_OK)
+            username_input = serializer.validated_data["username"].strip()
+            password_input = serializer.validated_data["password"]
+
+            # Allow users to sign in with either username or email.
+            user = CustomUser.objects.filter(
+                Q(username__iexact=username_input) | Q(email__iexact=username_input)
+            ).first()
+
+            if not user or not user.check_password(password_input):
+                return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            if not user.is_active:
+                return Response({"error": "Verify OTP"}, status=status.HTTP_403_FORBIDDEN)
+            user_info = {
+                "username": user.username,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+            }
+            return Response({"tokens": get_tokens(user), "user": user_info}, status=status.HTTP_200_OK)
         return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 class LogoutAPI(GenericAPIView):
@@ -137,9 +153,13 @@ class EventViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_staff or user.is_superuser: 
             return Event.objects.all()
+        # İstifadəçi yalnız öz rol(lar)ına icazə verilən eventləri görməlidir.
+        # Public eventlər: ya rol məhdudiyyəti yoxdur, ya da istifadəçinin rolu uyğundur.
+        # Private eventlər: eyni qayda ilə yalnız uyğun rol olduqda görünür.
+        user_role_ids = user.roles.values_list('id', flat=True)
+
         return Event.objects.filter(
-            Q(visibility='public') | 
-            Q(visibility='private', allowed_participants__email=user.email)
+            Q(allowed_roles__isnull=True) | Q(allowed_roles__id__in=user_role_ids)
         ).distinct()
 
     def perform_create(self, serializer):
@@ -163,9 +183,32 @@ class AllowedParticipantViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsActiveUser]
 
     def perform_create(self, serializer):
-        # Əgər tələbə özü qoşulursa, sistem avtomatik onun emailini götürür
-        if not self.request.user.is_staff:
-            serializer.save(email=self.request.user.email)
+        # Tədbiri serializer məlumatından götür
+        event = serializer.validated_data.get('event')
+        if not event:
+            raise ValidationError({"event": "Event is required."})
+
+        # Email təyin et: tələbə üçün sistem özü götürür, staff üçün request-dən
+        if self.request.user.is_staff:
+            email = self.request.data.get('email')
+            if not email:
+                raise ValidationError({"email": "Email daxil etmək tələb olunur."})
         else:
-            # Staff-dırsa, başqasını da əlavə edə bilər (email daxil etməklə)
-            serializer.save()
+            email = self.request.user.email
+
+            # Rol məhdudiyyəti: əgər tədbir üçün allowed_roles təyin olunubsa,
+            # istifadəçinin rolu onlardan biri olmalıdır.
+            event_roles = event.allowed_roles.all()
+            if event_roles.exists():
+                if not self.request.user.roles.filter(id__in=event_roles.values_list('id', flat=True)).exists():
+                    raise ValidationError({"detail": "Bu tədbir üçün uyğun rolunuz yoxdur."})
+
+        # Maksimum iştirakçı limiti
+        if event.max_participants is not None and event.allowed_participants.count() >= event.max_participants:
+            raise ValidationError({"detail": "Bu tədbir üçün maksimum iştirakçı sayı dolub."})
+
+        # Eyni tədbirə təkrar qoşulmağın qarşısını al
+        if AllowedParticipant.objects.filter(event=event, email=email).exists():
+            raise ValidationError({"detail": "Artıq bu tədbirə qoşulmusan."})
+
+        serializer.save(email=email)
