@@ -1025,7 +1025,7 @@ function AdminPage({ events, users }) {
     return (
         <>
             <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', background: 'rgba(166,199,255,0.47)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Admin Dashboard</h2>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '2.5rem', background: 'rgba(4, 20, 48, 0.47)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Admin Dashboard</h2>
             </div>
             <div className="admin-dashboard">
                 <div className="stat-card"><div className="stat-icon" style={{ background: 'rgba(166,199,255,0.47)' }}>📅</div><div className="stat-value">{totalEvents}</div><div className="stat-label">Total Events</div></div>
