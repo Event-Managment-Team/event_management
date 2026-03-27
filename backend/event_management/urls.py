@@ -1,6 +1,7 @@
 """Root URL configuration for the event_management project."""
 
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path, include, re_path
 
 from rest_framework import permissions
@@ -21,6 +22,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', lambda request: JsonResponse({'status': 'ok', 'service': 'event_management'})),
     path('', include('event_app.urls')),
 
     # OpenAPI/Swagger/Redoc endpoints

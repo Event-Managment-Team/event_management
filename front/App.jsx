@@ -1,5 +1,30 @@
 const { useState, useEffect } = React;
 
+// ─── Backend API Config ─────────────────────────────────────────────────────
+
+// Django dev server base URL (change port if you run backend on a different one)
+const API_BASE = 'http://localhost:8002'; // NEED TO BE UPDATED TO MATCH YOUR BACKEND URL
+
+async function apiRequest(path, { method = 'GET', body, token } = {}) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+    });
+
+    let data = null;
+    const text = await res.text();
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    if (!res.ok) {
+        const message = (data && (data.detail || data.message)) || `Request failed: ${res.status}`;
+        throw new Error(message);
+    }
+    return data;
+}
+
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const MOCK_USERS = [
@@ -41,21 +66,49 @@ function App() {
     const [authPage, setAuthPage]                 = useState('login'); // 'login' | 'forgot' | 'register-otp'
     const [pendingUser, setPendingUser]           = useState(null);   // temp store during register OTP
 
-    const handleLogin = (username, password) => {
-        const user = MOCK_USERS.find(u => u.username === username && u.password === password);
-        if (user) { setCurrentUser(user); setCurrentPage('events'); return true; }
-        return false;
+    const handleLogin = async (username, password) => {
+        // Expect backend: POST /api/login/ -> returns tokens and user info
+        const payload = await apiRequest('/api/login/', {
+            method: 'POST',
+            body: { username, password },
+        });
+
+        // Try to map common response shapes
+        const access = payload?.access || payload?.access_token || payload?.token || payload?.tokens?.access;
+        const refresh = payload?.refresh || payload?.refresh_token || payload?.tokens?.refresh;
+        const user = payload?.user || payload?.data?.user;
+
+        const resolvedUser = {
+            username: user?.username || username,
+            name: user?.name || user?.full_name || user?.fullName || username,
+            role: user?.role || 'student',
+            access,
+            refresh,
+        };
+
+        setCurrentUser(resolvedUser);
+        setCurrentPage('events');
+        return true;
     };
 
     // Called after register form submit — go to OTP verification
-    const handleRegisterOtp = (userData) => {
+    const handleRegisterOtp = async (userData) => {
+        // Expect backend: POST /api/register/ (sends OTP to email)
+        await apiRequest('/api/register/', {
+            method: 'POST',
+            body: userData,
+        });
         setPendingUser(userData);
         setAuthPage('register-otp');
     };
 
     // Called after OTP verified on register
     const handleRegisterComplete = () => {
-        setCurrentUser(pendingUser);
+        setCurrentUser({
+            username: pendingUser?.username,
+            name: pendingUser?.name || pendingUser?.full_name || pendingUser?.fullName || pendingUser?.username,
+            role: 'student',
+        });
         setCurrentPage('events');
         setPendingUser(null);
     };
@@ -154,6 +207,8 @@ function Navbar({ currentUser, currentPage, setCurrentPage, onLogout }) {
 function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
     const [isRegister, setIsRegister]           = useState(false);
     const [username, setUsername]               = useState('');
+    const [email, setEmail]                     = useState('');
+    const [phone, setPhone]                     = useState('');
     const [password, setPassword]               = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [fullName, setFullName]               = useState('');
@@ -179,6 +234,8 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
         setIsRegister(!isRegister);
         setError('');
         setUsername('');
+        setEmail('');
+        setPhone('');
         setPassword('');
         setConfirmPassword('');
         setFullName('');
@@ -194,23 +251,33 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
             // Validate register fields
             if (!fullName.trim())           { setError('Please enter your full name'); return; }
             if (!username.trim())           { setError('Please enter a username'); return; }
+            if (!email.trim())              { setError('Please enter your university email'); return; }
+            if (!phone.trim())              { setError('Please enter your phone number'); return; }
             if (password.length < 8)        { setError('Password must be at least 8 characters'); return; }
             if (password !== confirmPassword){ setError('Passwords do not match'); return; }
             setLoading(true);
-            // TODO: replace with → fetch('/auth/register', { method:'POST', body: JSON.stringify({ name: fullName, username, email, password }) })
-            // On success backend sends OTP to email, we move to OTP verification step
-            setTimeout(() => {
-                setLoading(false);
-                onRegisterOtp({ username, name: fullName, role: 'student' });
-            }, 700);
+            setTimeout(async () => {
+                try {
+                    await onRegisterOtp({ username, email, phone, password, full_name: fullName });
+                } catch (err) {
+                    setError(err.message || 'Registration failed');
+                } finally {
+                    setLoading(false);
+                }
+            }, 200);
         } else {
             // Login flow
             if (!username.trim()) { setError('Please enter your username'); return; }
             setLoading(true);
-            setTimeout(() => {
-                const success = onLogin(username, password);
-                if (!success) setError('Invalid username or password');
-                setLoading(false);
+            setTimeout(async () => {
+                try {
+                    const success = await onLogin(username, password);
+                    if (!success) setError('Invalid username or password');
+                } catch (err) {
+                    setError(err.message || 'Login failed');
+                } finally {
+                    setLoading(false);
+                }
             }, 600);
         }
     };
@@ -282,6 +349,31 @@ function LoginPage({ onLogin, onForgotPassword, onRegisterOtp }) {
                                     type="text" className="form-input"
                                     placeholder="Your full name"
                                     value={fullName} onChange={(e) => setFullName(e.target.value)}
+                                    required disabled={loading}
+                                />
+                            </div>
+                        )}
+
+                        {isRegister && (
+                            <div className="form-group">
+                                <label className="form-label">University Email</label>
+                                <input
+                                    type="email" className="form-input"
+                                    placeholder="name@university.edu.az"
+                                    value={email} onChange={(e) => setEmail(e.target.value)}
+                                    required disabled={loading}
+                                    autoComplete="email"
+                                />
+                            </div>
+                        )}
+
+                        {isRegister && (
+                            <div className="form-group">
+                                <label className="form-label">Phone</label>
+                                <input
+                                    type="text" className="form-input"
+                                    placeholder="Phone number"
+                                    value={phone} onChange={(e) => setPhone(e.target.value)}
                                     required disabled={loading}
                                 />
                             </div>
@@ -651,26 +743,43 @@ function RegisterOtpPage({ email, onVerified, onBack }) {
             document.getElementById(`reg-otp-${idx - 1}`)?.focus();
     };
 
-    const handleVerify = (e) => {
+    const handleVerify = async (e) => {
         e.preventDefault();
         setError('');
         const fullCode = code.join('');
         if (fullCode.length < 6) { setError('Please enter the full 6-digit code'); return; }
         setLoading(true);
-        // TODO: replace with → fetch('/auth/verify-email', { method:'POST', body: JSON.stringify({ email, otp: fullCode }) })
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            await apiRequest('/api/verify-otp/', {
+                method: 'POST',
+                body: { email, otp: fullCode },
+            });
             onVerified();
-        }, 800);
+        } catch (err) {
+            setError(err.message || 'OTP verification failed');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleResend = () => {
+    const handleResend = async () => {
         if (resendTimer > 0) return;
         setCode(['', '', '', '', '', '']);
         setError('');
-        setSuccess('A new code has been sent!');
-        setResendTimer(60);
-        // TODO: replace with → fetch('/auth/resend-otp', { method:'POST', body: JSON.stringify({ email }) })
+        setLoading(true);
+        try {
+            // Re-trigger register endpoint to resend OTP
+            await apiRequest('/api/register/', {
+                method: 'POST',
+                body: { email },
+            });
+            setSuccess('A new code has been sent!');
+            setResendTimer(60);
+        } catch (err) {
+            setError(err.message || 'Failed to resend code');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

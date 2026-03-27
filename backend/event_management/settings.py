@@ -124,4 +124,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media') #
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5500',
     'http://localhost:5500',
+    'http://127.0.0.1:5173',
+    'http://localhost:5173',
+]
+
+# If you serve the static frontend from a different port (e.g. `python -m http.server 3000`).
+CORS_ALLOWED_ORIGINS += [
+    'http://127.0.0.1:3000',
+    'http://localhost:3000',
 ]
