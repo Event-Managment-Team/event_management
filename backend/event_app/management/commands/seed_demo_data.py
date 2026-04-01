@@ -34,8 +34,12 @@ class Command(BaseCommand):
     def _create_users(self, roles):
         users = {}
 
-        # Admin / superuser
-        admin, created = CustomUser.objects.get_or_create(
+        # Frontend demo accounts (match front/App.jsx):
+        # - student / student123
+        # - staff / staff123
+        # - admin / admin123
+
+        admin, _ = CustomUser.objects.get_or_create(
             username="admin",
             defaults={
                 "email": "admin@demo.edu.az",
@@ -45,54 +49,55 @@ class Command(BaseCommand):
                 "is_active": True,
             },
         )
-        if created:
-            admin.set_password("Admin12345!")
-            admin.save()
-            self.stdout.write(self.style.SUCCESS("Created superuser: admin / Admin12345!"))
-        else:
-            self.stdout.write("Superuser 'admin' already exists (password unchanged).")
+        admin.is_staff = True
+        admin.is_superuser = True
+        admin.is_active = True
+        admin.set_password("admin123")
+        admin.save()
         admin.roles.set([roles["Organizer"]])
+        self.stdout.write(self.style.SUCCESS("Ensured demo superuser: admin / admin123"))
         users["admin"] = admin
 
-        # Staff user (event organizer)
-        staff, created = CustomUser.objects.get_or_create(
-            username="staff1",
+        staff, _ = CustomUser.objects.get_or_create(
+            username="staff",
             defaults={
-                "email": "staff1@demo.edu.az",
+                "email": "staff@demo.edu.az",
                 "phone": "+994502222222",
                 "is_staff": True,
                 "is_superuser": False,
                 "is_active": True,
             },
         )
-        if created:
-            staff.set_password("Staff12345!")
-            staff.save()
-            self.stdout.write(self.style.SUCCESS("Created staff user: staff1 / Staff12345!"))
-        else:
-            self.stdout.write("Staff user 'staff1' already exists (password unchanged).")
+        staff.is_staff = True
+        staff.is_superuser = False
+        staff.is_active = True
+        staff.set_password("staff123")
+        staff.save()
         staff.roles.set([roles["Organizer"]])
-        users["staff1"] = staff
+        self.stdout.write(self.style.SUCCESS("Ensured demo staff: staff / staff123"))
+        users["staff"] = staff
 
-        # Regular student users
-        student1, created = CustomUser.objects.get_or_create(
-            username="student1",
+        student, _ = CustomUser.objects.get_or_create(
+            username="student",
             defaults={
-                "email": "student1@cs.edu.az",
+                "email": "student@cs.edu.az",
                 "phone": "+994503333333",
                 "is_staff": False,
                 "is_superuser": False,
                 "is_active": True,
             },
         )
-        if created:
-            student1.set_password("Student12345!")
-            student1.save()
-            self.stdout.write(self.style.SUCCESS("Created user: student1 / Student12345!"))
-        student1.roles.set([roles["Student"]])
-        users["student1"] = student1
+        student.is_staff = False
+        student.is_superuser = False
+        student.is_active = True
+        student.set_password("student123")
+        student.save()
+        student.roles.set([roles["Student"]])
+        self.stdout.write(self.style.SUCCESS("Ensured demo student: student / student123"))
+        users["student"] = student
 
-        student2, created = CustomUser.objects.get_or_create(
+        # Extra demo students (optional)
+        student2, _ = CustomUser.objects.get_or_create(
             username="student2",
             defaults={
                 "email": "student2@ee.edu.az",
@@ -102,11 +107,8 @@ class Command(BaseCommand):
                 "is_active": True,
             },
         )
-        if created:
-            student2.set_password("Student12345!")
-            student2.save()
-            self.stdout.write(self.style.SUCCESS("Created user: student2 / Student12345!"))
-        student2.roles.set([roles["Student"]])
+        if not student2.roles.filter(id=roles["Student"].id).exists():
+            student2.roles.set([roles["Student"]])
         users["student2"] = student2
 
         return users
@@ -217,8 +219,12 @@ class Command(BaseCommand):
         if not private_event:
             return
 
-        student1 = users["student1"]
-        student2 = users["student2"]
+        # Support both legacy keys (student1) and the new frontend-aligned key (student).
+        student1 = users.get("student") or users.get("student1")
+        student2 = users.get("student2")
+
+        if not student1 or not student2:
+            return
 
         for user, group_name in [
             (student1, "601.21"),

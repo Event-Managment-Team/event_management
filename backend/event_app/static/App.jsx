@@ -1,6 +1,6 @@
 const { useEffect, useMemo, useState } = React;
 
-const API_BASE = window.location.port === '9000' ? '' : 'http://127.0.0.1:9000';
+const API_BASE = window.location.port === '8000' ? '' : 'http://127.0.0.1:8000';
 const TOKEN_STORAGE_KEY = 'event_ui_tokens';
 const USER_STORAGE_KEY = 'event_ui_user';
 

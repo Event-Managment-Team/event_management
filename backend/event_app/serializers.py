@@ -53,6 +53,10 @@ class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6, min_length=6)
 
+
+class ResendOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
@@ -117,5 +121,5 @@ class AllowedParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = AllowedParticipant
         fields = ['id', 'event', 'email', 'group_name']
-       
+
         read_only_fields = ['email']

@@ -16,7 +16,7 @@ from .models import (
 )
 from .serializers import (
     RegisterSerializer, VerifyOTPSerializer, LoginSerializer, LogoutSerializer,
-    ForgotPasswordSerializer, ResetPasswordSerializer,
+    ForgotPasswordSerializer, ResetPasswordSerializer, ResendOTPSerializer,
     RoleSerializer, EventSerializer, EventImageSerializer, EventAgendaSerializer,
     AllowedParticipantSerializer # BU SERIALIZER-İ SERIALIZERS.PY-A ƏLAVƏ ETMƏYİ UNUTMA
 )
@@ -62,6 +62,36 @@ class VerifyOTPAPI(GenericAPIView):
                     return Response({"tokens": get_tokens(user)}, status=status.HTTP_200_OK)
             except: pass
         return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResendOTPAPI(GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ResendOTPSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data["email"]
+            try:
+                user = CustomUser.objects.get(email=email)
+            except CustomUser.DoesNotExist:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            if user.is_active:
+                return Response({"error": "Account already verified"}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.otp = str(random.randint(100000, 999999))
+            user.otp_created_at = timezone.now()
+            user.save()
+
+            try:
+                send_mail("OTP Verification", f"Kod: {user.otp}", None, [user.email])
+            except:
+                pass
+
+            return Response({"message": "OTP sent", "email": user.email}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginAPI(GenericAPIView):
     permission_classes = [AllowAny]
@@ -110,12 +140,19 @@ class ForgotPasswordAPI(GenericAPIView):
         if serializer.is_valid():
             try:
                 user = CustomUser.objects.get(email=serializer.validated_data["email"])
-                user.otp = str(random.randint(100000, 999999))
-                user.otp_created_at = timezone.now()
-                user.save()
+            except CustomUser.DoesNotExist:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            user.otp = str(random.randint(100000, 999999))
+            user.otp_created_at = timezone.now()
+            user.save()
+
+            try:
                 send_mail("Reset OTP", f"Code: {user.otp}", None, [user.email])
-                return Response({"message": "OTP sent"})
-            except: return Response({"error": "User not found"}, status=404)
+            except:
+                pass
+
+            return Response({"message": "OTP sent"})
         return Response(serializer.errors, status=400)
 
 class ResetPasswordAPI(GenericAPIView):
@@ -151,7 +188,7 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff or user.is_superuser: 
+        if user.is_staff or user.is_superuser:
             return Event.objects.all()
         # İstifadəçi yalnız öz rol(lar)ına icazə verilən eventləri görməlidir.
         # Public eventlər: ya rol məhdudiyyəti yoxdur, ya da istifadəçinin rolu uyğundur.
