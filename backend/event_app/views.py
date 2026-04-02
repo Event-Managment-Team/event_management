@@ -10,6 +10,7 @@ from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.db.models import Q, Count
 import random
+import logging
 
 from .models import (
     CustomUser, Role, Event, EventImage, EventAgenda, AllowedParticipant
@@ -17,9 +18,11 @@ from .models import (
 from .serializers import (
     RegisterSerializer, VerifyOTPSerializer, LoginSerializer, LogoutSerializer,
     ForgotPasswordSerializer, ResetPasswordSerializer,
-    RoleSerializer, EventSerializer, EventImageSerializer, EventAgendaSerializer,
+    RoleSerializer, AdminUserRoleSerializer, EventSerializer, EventImageSerializer, EventAgendaSerializer,
     AllowedParticipantSerializer # BU SERIALIZER-İ SERIALIZERS.PY-A ƏLAVƏ ETMƏYİ UNUTMA
 )
+
+logger = logging.getLogger(__name__)
 
 def get_tokens(user):
     refresh = RefreshToken.for_user(user)
@@ -42,8 +45,14 @@ class RegisterAPI(GenericAPIView):
             user.otp_created_at = timezone.now()
             user.save()
             try:
-                send_mail("OTP Verification", f"Kod: {user.otp}", None, [user.email])
-            except: pass
+                send_mail("OTP Verification", f"Kod: {user.otp}", None, [user.email], fail_silently=False)
+            except Exception:
+                logger.exception("Failed to send OTP email during registration")
+                user.delete()
+                return Response(
+                    {"error": "Could not send OTP email. Please check email server credentials and try again."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
             return Response({"message": "OTP sent", "email": user.email}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -110,12 +119,23 @@ class ForgotPasswordAPI(GenericAPIView):
         if serializer.is_valid():
             try:
                 user = CustomUser.objects.get(email=serializer.validated_data["email"])
-                user.otp = str(random.randint(100000, 999999))
-                user.otp_created_at = timezone.now()
-                user.save()
-                send_mail("Reset OTP", f"Code: {user.otp}", None, [user.email])
-                return Response({"message": "OTP sent"})
-            except: return Response({"error": "User not found"}, status=404)
+            except CustomUser.DoesNotExist:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            user.otp = str(random.randint(100000, 999999))
+            user.otp_created_at = timezone.now()
+            user.save()
+
+            try:
+                send_mail("Reset OTP", f"Code: {user.otp}", None, [user.email], fail_silently=False)
+            except Exception:
+                logger.exception("Failed to send reset OTP email")
+                return Response(
+                    {"error": "Could not send reset code email. Please try again later."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            return Response({"message": "OTP sent"})
         return Response(serializer.errors, status=400)
 
 class ResetPasswordAPI(GenericAPIView):
@@ -141,6 +161,21 @@ class RoleViewSet(viewsets.ModelViewSet):
     serializer_class = RoleSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
 
+
+class AdminUserRoleViewSet(viewsets.ModelViewSet):
+    serializer_class = AdminUserRoleSerializer
+    permission_classes = [IsAuthenticated, IsActiveUser, permissions.IsAdminUser]
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+    def get_queryset(self):
+        queryset = CustomUser.objects.prefetch_related('roles').order_by('username')
+        search = (self.request.query_params.get('search') or '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(username__icontains=search) | Q(email__icontains=search)
+            )
+        return queryset
+
 class EventViewSet(viewsets.ModelViewSet):
     serializer_class = EventSerializer
 
@@ -152,15 +187,42 @@ class EventViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_staff or user.is_superuser: 
-            return Event.objects.all()
-        # İstifadəçi yalnız öz rol(lar)ına icazə verilən eventləri görməlidir.
-        # Public eventlər: ya rol məhdudiyyəti yoxdur, ya da istifadəçinin rolu uyğundur.
-        # Private eventlər: eyni qayda ilə yalnız uyğun rol olduqda görünür.
-        user_role_ids = user.roles.values_list('id', flat=True)
+            queryset = Event.objects.all()
+        else:
+            # İstifadəçi yalnız öz rol(lar)ına icazə verilən eventləri görməlidir.
+            # Public eventlər: ya rol məhdudiyyəti yoxdur, ya da istifadəçinin rolu uyğundur.
+            # Private eventlər: eyni qayda ilə yalnız uyğun rol olduqda görünür.
+            user_role_ids = user.roles.values_list('id', flat=True)
 
-        return Event.objects.filter(
-            Q(allowed_roles__isnull=True) | Q(allowed_roles__id__in=user_role_ids)
-        ).distinct()
+            queryset = Event.objects.filter(
+                Q(allowed_roles__isnull=True) | Q(allowed_roles__id__in=user_role_ids)
+            ).distinct()
+
+        # Events page filter controls pass query params as: search, type, ordering.
+        event_type = self.request.query_params.get('type')
+        if event_type in {'online', 'offline', 'hybrid'}:
+            queryset = queryset.filter(type=event_type)
+
+        search = (self.request.query_params.get('search') or '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search)
+                | Q(desc__icontains=search)
+                | Q(organizer_side__icontains=search)
+                | Q(building__icontains=search)
+                | Q(room__icontains=search)
+            )
+
+        ordering = self.request.query_params.get('ordering', '-start_date')
+        allowed_ordering = {
+            'start_date', '-start_date',
+            'title', '-title',
+            'created_date', '-created_date',
+        }
+        if ordering not in allowed_ordering:
+            ordering = '-start_date'
+
+        return queryset.order_by(ordering)
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)

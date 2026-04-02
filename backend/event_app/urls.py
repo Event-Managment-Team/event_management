@@ -3,12 +3,13 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     RegisterAPI, VerifyOTPAPI, LoginAPI, LogoutAPI,
     ForgotPasswordAPI, ResetPasswordAPI,
-    RoleViewSet, EventViewSet, EventImageViewSet,
+    RoleViewSet, AdminUserRoleViewSet, EventViewSet, EventImageViewSet,
     AllowedParticipantViewSet  
 )
 
 router = DefaultRouter()
 router.register(r'roles', RoleViewSet, basename='roles')
+router.register(r'admin-users', AdminUserRoleViewSet, basename='admin-users')
 router.register(r'events', EventViewSet, basename='events')
 router.register(r'event-images', EventImageViewSet, basename='event-images')
 router.register(r'allowed-participants', AllowedParticipantViewSet, basename='allowed-participants') 

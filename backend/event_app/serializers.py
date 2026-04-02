@@ -12,25 +12,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'phone', 'password')
 
     def validate_email(self, value):
-        whitelist_emails = ['senin_test_emailin@gmail.com']
-
-        email_lower = value.lower()
-
-        if email_lower in whitelist_emails:
-            return value
-
-        try:
-            local_part, domain = email_lower.split('@', 1)
-        except ValueError:
-            # DRF's EmailField will normally catch format errors, but keep a safeguard.
-            raise serializers.ValidationError("Düzgün email formatı daxil edin.")
-
-        # Yalnız *.edu.az domeninə icazə ver (məsələn: name@beu.edu.az, user@uni.edu.az)
-        if not (local_part and domain.endswith('.edu.az') and domain != 'edu.az'):
-            raise serializers.ValidationError(
-                "Qeydiyyat üçün yalnız universitet emaili tələb olunur (nümunə: ad@universitet.edu.az)."
-            )
-
         return value
 
     def create(self, validated_data):
@@ -72,6 +53,21 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = '__all__'
+
+
+class AdminUserRoleSerializer(serializers.ModelSerializer):
+    roles = RoleSerializer(many=True, read_only=True)
+    role_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Role.objects.all(), many=True, write_only=True, source='roles', required=False
+    )
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id', 'username', 'email', 'is_active', 'is_staff', 'is_superuser',
+            'roles', 'role_ids'
+        ]
+        read_only_fields = ['id', 'username', 'email', 'is_active', 'is_staff', 'is_superuser']
 
 class EventImageSerializer(serializers.ModelSerializer):
     class Meta:
