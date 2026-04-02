@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { eventService } from "@/services/eventService";
 import EventCard from "@/components/events/EventCard";
@@ -14,17 +14,57 @@ const EventsPage = () => {
   const [sortBy, setSortBy] = useState("-start_date");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["events", search, typeFilter, sortBy],
+    queryKey: ["events"],
     queryFn: async () => {
-      const params: Record<string, string> = { ordering: sortBy };
-      if (search) params.search = search;
-      if (typeFilter !== "all") params.type = typeFilter;
-      const res = await eventService.getAll(params);
+      const res = await eventService.getAll();
       return (res.data.results || res.data) as Event[];
     },
   });
 
-  const events = data || [];
+  const events = useMemo(() => {
+    const source = data || [];
+    const normalizedSearch = search.trim().toLowerCase();
+
+    let filtered = source.filter((event) => {
+      if (typeFilter !== "all" && event.type !== typeFilter) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const haystack = [
+        event.title,
+        event.description,
+        event.organizer,
+        event.building,
+        event.room,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+
+    filtered = [...filtered].sort((a, b) => {
+      if (sortBy === "title") {
+        return a.title.localeCompare(b.title);
+      }
+
+      const aStart = new Date(a.start_date).getTime();
+      const bStart = new Date(b.start_date).getTime();
+
+      if (sortBy === "start_date") {
+        return aStart - bStart;
+      }
+
+      return bStart - aStart;
+    });
+
+    return filtered;
+  }, [data, search, sortBy, typeFilter]);
 
   return (
     <div className="container py-8 max-w-4xl">
