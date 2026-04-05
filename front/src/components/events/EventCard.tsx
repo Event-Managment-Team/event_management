@@ -3,27 +3,35 @@ import type { Event } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { CalendarDays, MapPin, Users, Monitor, Building2, Globe } from "lucide-react";
+import {
+  ArrowUpRight,
+  CalendarDays,
+  Globe,
+  Building2,
+  MapPin,
+  Monitor,
+  Users,
+} from "lucide-react";
 import { format } from "date-fns";
 
-const typeIcons = {
+const typeIcons: Record<Event["type"], typeof Globe> = {
   online: Monitor,
   offline: Building2,
   hybrid: Globe,
 };
 
-const typeStyles: Record<Event["type"], { ribbon: string; pill: string }> = {
+const typeStyles: Record<Event["type"], { pill: string; surface: string }> = {
   online: {
-    ribbon: "from-sky-500/80 via-sky-400/45 to-cyan-300/35",
-    pill: "border-sky-200 bg-sky-100 text-sky-800",
+    pill: "border-sky-200 bg-sky-50 text-sky-700",
+    surface: "from-sky-900/25 via-sky-700/10 to-cyan-400/35",
   },
   offline: {
-    ribbon: "from-amber-500/80 via-orange-400/45 to-yellow-300/35",
-    pill: "border-amber-200 bg-amber-100 text-amber-900",
+    pill: "border-amber-200 bg-amber-50 text-amber-700",
+    surface: "from-amber-900/25 via-amber-700/10 to-orange-400/35",
   },
   hybrid: {
-    ribbon: "from-violet-500/80 via-fuchsia-400/45 to-pink-300/35",
-    pill: "border-violet-200 bg-violet-100 text-violet-800",
+    pill: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    surface: "from-emerald-900/25 via-emerald-700/10 to-teal-400/35",
   },
 };
 
@@ -33,6 +41,10 @@ const EventCard = ({ event }: { event: Event }) => {
   const safeCapacity = Math.max(event.max_participants, 1);
   const capacityPercent = Math.min(100, Math.round((event.participant_count / safeCapacity) * 100));
   const spotsLeft = Math.max(event.max_participants - event.participant_count, 0);
+  const primaryImage = event.images?.[0]?.image;
+  const startDate = new Date(event.start_date);
+  const endDate = new Date(event.end_date);
+
   const location = [
     event.building,
     event.floor ? `Floor ${event.floor}` : null,
@@ -43,91 +55,119 @@ const EventCard = ({ event }: { event: Event }) => {
 
   return (
     <Link to={`/events/${event.id}`} className="block h-full">
-      <Card className="group h-full overflow-hidden border-border/70 bg-card/90 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
-        <div className={cn("h-1.5 w-full bg-gradient-to-r", typeStyles[event.type].ribbon)} />
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-2">
-              <Badge
-                variant="outline"
-                className={cn("w-fit gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", typeStyles[event.type].pill)}
-              >
-                <TypeIcon className="h-3.5 w-3.5" />
-                {event.type}
-              </Badge>
-              <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-foreground transition-colors group-hover:text-primary">
+      <Card className="group h-full overflow-hidden border border-border/70 bg-white/95 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_45px_-28px_rgba(37,99,235,0.45)]">
+        <div className="relative aspect-[16/8] overflow-hidden border-b border-border/70">
+          {primaryImage ? (
+            <img
+              src={primaryImage}
+              alt={`${event.title} cover`}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              loading="lazy"
+            />
+          ) : (
+            <div className={cn("h-full w-full bg-gradient-to-br", typeStyles[event.type].surface)}>
+              <div className="flex h-full items-center justify-center">
+                <div className="rounded-full border border-white/35 bg-white/20 p-4 text-white/90 backdrop-blur-sm">
+                  <TypeIcon className="h-7 w-7" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-slate-900/10 to-transparent" />
+
+          <div className="absolute left-4 top-4 flex items-center gap-2">
+            <Badge variant="outline" className={cn("border backdrop-blur-sm", typeStyles[event.type].pill)}>
+              <TypeIcon className="mr-1 h-3.5 w-3.5" />
+              {event.type}
+            </Badge>
+            <Badge variant="secondary" className="bg-white/90 text-slate-700 capitalize">
+              {event.visibility}
+            </Badge>
+          </div>
+
+          <div className="absolute right-4 top-4 rounded-lg border border-white/40 bg-white/90 px-3 py-2 text-center shadow-sm">
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">
+              {format(startDate, "MMM")}
+            </p>
+            <p className="text-lg font-semibold leading-none text-slate-900">{format(startDate, "dd")}</p>
+          </div>
+
+          <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 text-white">
+            <p className="line-clamp-1 text-sm font-medium text-white/95">{event.organizer}</p>
+            {event.is_joined && (
+              <Badge className="bg-emerald-500 text-white">Joined</Badge>
+            )}
+            {isFull && !event.is_joined && (
+              <Badge variant="destructive">Full</Badge>
+            )}
+          </div>
+        </div>
+
+        <CardContent className="space-y-4 p-5">
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-slate-900 transition-colors group-hover:text-primary">
                 {event.title}
               </h3>
-              <p className="text-sm text-muted-foreground">by {event.organizer}</p>
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary" />
             </div>
-
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                {event.visibility}
-              </Badge>
-              {event.is_joined && (
-                <Badge className="bg-success text-success-foreground text-xs">Joined</Badge>
-              )}
-              {isFull && !event.is_joined && (
-                <Badge variant="destructive" className="text-xs">Full</Badge>
-              )}
-            </div>
+            <p className="line-clamp-2 text-sm leading-relaxed text-slate-600">{event.description}</p>
           </div>
 
-          <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-            {event.description}
-          </p>
-
-          <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
-            <div className="rounded-xl border border-border/70 bg-muted/40 p-3">
-              <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                <CalendarDays className="h-3.5 w-3.5" />
-                Starts
+          <div className="grid gap-2 text-xs sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-1 inline-flex items-center gap-1.5 font-medium uppercase tracking-wide text-slate-500">
+                <CalendarDays className="h-3.5 w-3.5" /> Schedule
               </p>
-              <p className="font-medium text-foreground">
-                {format(new Date(event.start_date), "EEE, MMM d - h:mm a")}
-              </p>
+              <p className="text-slate-900">{format(startDate, "EEE, MMM d · h:mm a")}</p>
+              <p className="text-slate-500">to {format(endDate, "h:mm a")}</p>
             </div>
 
-            <div className="rounded-xl border border-border/70 bg-muted/40 p-3">
-              <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" />
-                Location
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-1 inline-flex items-center gap-1.5 font-medium uppercase tracking-wide text-slate-500">
+                <MapPin className="h-3.5 w-3.5" /> Location
               </p>
-              <p className="line-clamp-2 font-medium text-foreground">
-                {location || (event.type === "online" ? "Online event" : "TBA")}
+              <p className="line-clamp-2 text-slate-900">
+                {location || (event.type === "online" ? "Online event" : "Location to be announced")}
               </p>
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl border border-border/70 bg-muted/40 p-3">
-            <p className="mb-2 flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Users className="h-3.5 w-3.5" />
-                Capacity
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="mb-2 flex items-center justify-between text-xs text-slate-600">
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" /> Capacity
               </span>
-              <span className="font-medium text-foreground">
+              <span className="font-semibold text-slate-900">
                 {event.participant_count}/{event.max_participants}
               </span>
             </p>
-            <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
               <div
                 className={cn("h-full rounded-full transition-all duration-500", isFull ? "bg-destructive" : "bg-primary")}
                 style={{ width: `${capacityPercent}%` }}
               />
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+
+            <p className="mt-1 text-[11px] text-slate-500">
               {isFull ? "No spots left" : `${spotsLeft} spots left`}
             </p>
           </div>
 
           {event.allowed_roles && event.allowed_roles.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {event.allowed_roles.map((role) => (
-                <Badge key={role.id} variant="outline" className="rounded-full bg-background text-[10px] font-medium">
+            <div className="flex flex-wrap gap-1.5">
+              {event.allowed_roles.slice(0, 4).map((role) => (
+                <Badge key={role.id} variant="outline" className="rounded-full bg-white text-[10px] font-medium text-slate-600">
                   {role.name}
                 </Badge>
               ))}
+              {event.allowed_roles.length > 4 && (
+                <Badge variant="outline" className="rounded-full bg-white text-[10px] font-medium text-slate-600">
+                  +{event.allowed_roles.length - 4} more
+                </Badge>
+              )}
             </div>
           )}
         </CardContent>

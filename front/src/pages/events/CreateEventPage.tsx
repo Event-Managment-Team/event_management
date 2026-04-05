@@ -76,6 +76,7 @@ const CreateEventPage = () => {
   const queryClient = useQueryClient();
 
   const [form, setForm] = useState(getInitialForm);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const { data: roles, isLoading: rolesLoading } = useQuery({
     queryKey: ["roles"],
@@ -86,7 +87,7 @@ const CreateEventPage = () => {
   });
 
   // Load existing event for edit
-  useQuery({
+  const { data: editableEvent } = useQuery({
     queryKey: ["event-edit", id],
     queryFn: async () => {
       const res = await eventService.getById(Number(id));
@@ -114,10 +115,32 @@ const CreateEventPage = () => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
   const saveMutation = useMutation({
-    mutationFn: (data: typeof form) =>
-      isEdit ? eventService.update(Number(id), data) : eventService.create(data),
-    onSuccess: () => {
-      toast.success(isEdit ? "Event updated" : "Event created");
+    mutationFn: async (data: typeof form) => {
+      const eventResponse = isEdit
+        ? await eventService.update(Number(id), data)
+        : await eventService.create(data);
+
+      let imageUploadError: string | null = null;
+      const savedEvent = eventResponse.data as Event;
+
+      if (imageFile && savedEvent.id) {
+        try {
+          await eventService.uploadImage(savedEvent.id, imageFile);
+        } catch (uploadErr) {
+          const uploadAxiosError = uploadErr as AxiosError<ApiError>;
+          imageUploadError = getApiErrorMessage(uploadAxiosError.response?.data);
+        }
+      }
+
+      return { savedEvent, imageUploadError };
+    },
+    onSuccess: ({ imageUploadError }) => {
+      if (imageUploadError) {
+        toast.error(`Event saved but image upload failed: ${imageUploadError}`);
+      } else {
+        toast.success(isEdit ? "Event updated" : "Event created");
+      }
+
       queryClient.invalidateQueries({ queryKey: ["events"] });
       navigate("/events");
     },
@@ -224,6 +247,26 @@ const CreateEventPage = () => {
                   rows={5}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="event-image">Event image</Label>
+                <Input
+                  id="event-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {imageFile
+                    ? `Selected: ${imageFile.name}`
+                    : "Optional. This image will be uploaded right after saving the event."}
+                </p>
+                {isEdit && editableEvent?.images?.length ? (
+                  <p className="text-xs text-muted-foreground">
+                    This event currently has {editableEvent.images.length} uploaded image(s).
+                  </p>
+                ) : null}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

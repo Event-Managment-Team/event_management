@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => {
           target: apiProxyTarget,
           changeOrigin: true,
         },
+        "/media": {
+          target: apiProxyTarget,
+          changeOrigin: true,
+        },
       },
     },
     plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
