@@ -68,13 +68,7 @@ const EventsPage = () => {
         return true;
       }
 
-      const haystack = [
-        event.title,
-        event.description,
-        event.organizer,
-        event.building,
-        event.room,
-      ]
+      const haystack = [event.title, event.description, event.organizer, event.building, event.room]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -132,27 +126,27 @@ const EventsPage = () => {
   };
 
   return (
-    <div className="relative overflow-hidden pb-12">
+    <div className="relative overflow-hidden bg-gradient-to-b from-sky-50/65 via-background to-amber-50/35 pb-12">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-200/50 blur-3xl" />
-        <div className="absolute top-36 -right-28 h-80 w-80 rounded-full bg-amber-200/35 blur-3xl" />
-        <div className="absolute bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -top-16 -left-16 h-72 w-72 rounded-full bg-sky-300/35 blur-3xl" />
+        <div className="absolute top-24 right-0 h-80 w-80 rounded-full bg-indigo-300/25 blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-amber-200/35 blur-3xl" />
       </div>
 
-      <div className="container max-w-7xl space-y-6 py-8">
-        <section className="relative overflow-hidden rounded-[30px] border border-border/70 bg-gradient-to-br from-white via-slate-50 to-sky-50/80 p-6 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.55)] sm:p-8">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
+        <section className="relative overflow-hidden rounded-[32px] border border-sky-200/70 bg-gradient-to-br from-white via-sky-50/85 to-indigo-50/80 p-6 shadow-[0_24px_65px_-46px_rgba(37,99,235,0.55)] sm:p-8">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div>
               <Badge variant="outline" className="rounded-full border-primary/30 bg-primary/10 px-3 py-1 text-primary">
                 <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Event Directory
               </Badge>
 
               <h1 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl">
-                Professional event discovery for your campus community
+                Discover events faster with a cleaner, brighter experience
               </h1>
 
-              <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
-                Browse upcoming sessions, filter by format, and find events that match your schedule in seconds.
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+                Browse upcoming sessions, filter by format, and quickly find the events that fit your schedule.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2">
@@ -164,8 +158,8 @@ const EventsPage = () => {
                     className={cn(
                       "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                       typeFilter === option.value
-                        ? "border-primary/35 bg-primary/15 text-primary"
-                        : "border-slate-300/90 bg-white/90 text-slate-600 hover:bg-slate-100"
+                        ? "border-primary/40 bg-primary text-primary-foreground shadow-sm"
+                        : "border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
                     )}
                   >
                     {option.label}
@@ -175,34 +169,34 @@ const EventsPage = () => {
 
               <div className="mt-6 flex flex-wrap gap-3">
                 {user?.is_staff && (
-                  <Button onClick={() => navigate("/events/create")} className="rounded-full px-5">
+                  <Button onClick={() => navigate("/events/create")} className="rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90">
                     <Plus className="h-4 w-4" /> Create event
                   </Button>
                 )}
-                <Button variant="outline" onClick={clearFilters} className="rounded-full px-5">
+                <Button variant="outline" onClick={clearFilters} className="rounded-full border-slate-300 bg-white px-5 hover:bg-slate-100">
                   <X className="h-4 w-4" /> Reset filters
                 </Button>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border/70 bg-white/90 p-5 shadow-sm backdrop-blur">
+            <div className="rounded-2xl border border-indigo-100/90 bg-white/95 p-5 shadow-sm backdrop-blur">
               <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Overview</p>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">All events</p>
+                <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-sky-700">All events</p>
                   <p className="mt-1 text-2xl font-semibold text-slate-900">{stats.total}</p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Upcoming</p>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-emerald-700">Upcoming</p>
                   <p className="mt-1 text-2xl font-semibold text-slate-900">{stats.upcoming}</p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Joined</p>
+                <div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-violet-700">Joined</p>
                   <p className="mt-1 text-2xl font-semibold text-slate-900">{stats.joined}</p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Private</p>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-amber-700">Private</p>
                   <p className="mt-1 text-2xl font-semibold text-slate-900">{stats.privateCount}</p>
                 </div>
               </div>
@@ -223,12 +217,12 @@ const EventsPage = () => {
             </div>
           </div>
 
-          <div className="pointer-events-none absolute -right-16 -top-12 h-40 w-40 rounded-full border border-primary/20" />
-          <div className="pointer-events-none absolute -bottom-20 left-1/3 h-44 w-44 rounded-full border border-slate-300/60" />
+          <div className="pointer-events-none absolute -right-20 -top-16 h-48 w-48 rounded-full border border-primary/20" />
+          <div className="pointer-events-none absolute -bottom-24 left-1/3 h-52 w-52 rounded-full border border-sky-200/70" />
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="h-fit rounded-2xl border border-border/70 bg-white/90 p-4 shadow-sm backdrop-blur sm:p-5 lg:sticky lg:top-24">
+        <section className="mt-6 grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+          <aside className="h-fit rounded-2xl border border-border/70 bg-gradient-to-b from-white to-slate-50 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24">
             <p className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-800">
               <Filter className="h-4 w-4 text-primary" /> Refine events
             </p>
@@ -242,7 +236,7 @@ const EventsPage = () => {
                     placeholder="Title, organizer, building..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9"
+                    className="border-slate-200 bg-white pl-9"
                   />
                 </div>
               </div>
@@ -257,7 +251,11 @@ const EventsPage = () => {
                       variant={typeFilter === option.value ? "default" : "outline"}
                       size="sm"
                       onClick={() => setTypeFilter(option.value)}
-                      className={cn("justify-start", option.value === "all" && "col-span-2")}
+                      className={cn(
+                        "justify-start",
+                        option.value === "all" && "col-span-2",
+                        typeFilter === option.value && "bg-primary text-primary-foreground"
+                      )}
                     >
                       {option.label}
                     </Button>
@@ -268,7 +266,7 @@ const EventsPage = () => {
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sort by</label>
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
+                  <SelectTrigger className="border-slate-200 bg-white">
                     <SelectValue placeholder="Sort events" />
                   </SelectTrigger>
                   <SelectContent>
@@ -282,7 +280,7 @@ const EventsPage = () => {
               </div>
 
               {hasActiveFilters ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+                <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3">
                   <p className="text-xs font-medium text-amber-900">Filters are active</p>
                   <p className="mt-1 text-xs text-amber-800">Showing focused results based on your criteria.</p>
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="mt-2 h-8 px-2 text-amber-900 hover:bg-amber-100">
@@ -290,15 +288,15 @@ const EventsPage = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-600">
-                  Use filters to narrow down events by type, keyword, and date order.
+                <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-xs text-sky-900">
+                  Apply filters to quickly discover relevant events.
                 </div>
               )}
             </div>
           </aside>
 
           <div className="space-y-4">
-            <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-white/90 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-gradient-to-r from-white via-indigo-50/50 to-amber-50/50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <LayoutGrid className="h-3.5 w-3.5" /> Event collection
@@ -309,22 +307,22 @@ const EventsPage = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-sky-800">
                   <Compass className="h-3.5 w-3.5" /> Discover
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-violet-800">
                   <CalendarRange className="h-3.5 w-3.5" /> Curated
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800">
                   <Users className="h-3.5 w-3.5" /> Community
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-800">
                   <Lock className="h-3.5 w-3.5" /> Secure
                 </span>
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
               {isLoading &&
                 Array.from({ length: 6 }).map((_, index) => (
                   <div key={index} className="animate-fade-in [animation-fill-mode:both]" style={{ animationDelay: `${index * 45}ms` }}>
@@ -333,7 +331,7 @@ const EventsPage = () => {
                 ))}
 
               {!isLoading && events.length === 0 && (
-                <div className="xl:col-span-2 rounded-2xl border border-dashed border-border bg-white/90 px-6 py-14 text-center shadow-sm">
+                <div className="md:col-span-2 2xl:col-span-3 rounded-2xl border border-dashed border-border bg-white/90 px-6 py-14 text-center shadow-sm">
                   <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
                     <Search className="h-6 w-6 text-slate-400" />
                   </div>

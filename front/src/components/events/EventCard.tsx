@@ -20,18 +20,21 @@ const typeIcons: Record<Event["type"], typeof Globe> = {
   hybrid: Globe,
 };
 
-const typeStyles: Record<Event["type"], { pill: string; surface: string }> = {
+const typeStyles: Record<Event["type"], { pill: string; surface: string; ribbon: string }> = {
   online: {
     pill: "border-sky-200 bg-sky-50 text-sky-700",
-    surface: "from-sky-900/25 via-sky-700/10 to-cyan-400/35",
+    surface: "from-sky-600/90 via-cyan-500/75 to-indigo-500/60",
+    ribbon: "from-sky-500 via-cyan-500 to-indigo-500",
   },
   offline: {
     pill: "border-amber-200 bg-amber-50 text-amber-700",
-    surface: "from-amber-900/25 via-amber-700/10 to-orange-400/35",
+    surface: "from-amber-500/90 via-orange-500/75 to-rose-400/60",
+    ribbon: "from-amber-500 via-orange-500 to-rose-400",
   },
   hybrid: {
     pill: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    surface: "from-emerald-900/25 via-emerald-700/10 to-teal-400/35",
+    surface: "from-emerald-500/90 via-teal-500/75 to-cyan-500/60",
+    ribbon: "from-emerald-500 via-teal-500 to-cyan-500",
   },
 };
 
@@ -55,7 +58,8 @@ const EventCard = ({ event }: { event: Event }) => {
 
   return (
     <Link to={`/events/${event.id}`} className="block h-full">
-      <Card className="group h-full overflow-hidden border border-border/70 bg-white/95 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_45px_-28px_rgba(37,99,235,0.45)]">
+      <Card className="group h-full overflow-hidden border border-border/70 bg-gradient-to-b from-white to-slate-50/60 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_45px_-28px_rgba(37,99,235,0.45)]">
+        <div className={cn("h-1.5 w-full bg-gradient-to-r", typeStyles[event.type].ribbon)} />
         <div className="relative aspect-[16/8] overflow-hidden border-b border-border/70">
           {primaryImage ? (
             <img
@@ -67,7 +71,7 @@ const EventCard = ({ event }: { event: Event }) => {
           ) : (
             <div className={cn("h-full w-full bg-gradient-to-br", typeStyles[event.type].surface)}>
               <div className="flex h-full items-center justify-center">
-                <div className="rounded-full border border-white/35 bg-white/20 p-4 text-white/90 backdrop-blur-sm">
+                <div className="rounded-full border border-white/45 bg-white/25 p-4 text-white shadow-sm backdrop-blur-sm">
                   <TypeIcon className="h-7 w-7" />
                 </div>
               </div>
