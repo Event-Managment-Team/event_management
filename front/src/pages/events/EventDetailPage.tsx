@@ -75,6 +75,7 @@ const EventDetailPage = () => {
 
   const [groupName, setGroupName] = useState("");
   const [joinOpen, setJoinOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ["event", id],
@@ -272,15 +273,50 @@ const EventDetailPage = () => {
               <CardContent>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {event.images.map((img, index) => (
-                    <img
+                    <button
                       key={img.id}
-                      src={img.image}
-                      alt={`${event.title} image ${index + 1}`}
-                      className="aspect-[4/3] w-full rounded-lg border border-border/70 object-cover bg-slate-100"
-                      loading="lazy"
-                    />
+                      type="button"
+                      className="overflow-hidden rounded-lg border border-border/70 bg-slate-100 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      onClick={() =>
+                        setPreviewImage({
+                          src: img.image,
+                          alt: `${event.title} image ${index + 1}`,
+                        })
+                      }
+                    >
+                      <img
+                        src={img.image}
+                        alt={`${event.title} image ${index + 1}`}
+                        className="aspect-[4/3] w-full cursor-zoom-in object-cover transition-transform duration-200 hover:scale-[1.02]"
+                        loading="lazy"
+                      />
+                    </button>
                   ))}
                 </div>
+
+                <Dialog
+                  open={Boolean(previewImage)}
+                  onOpenChange={(open) => {
+                    if (!open) {
+                      setPreviewImage(null);
+                    }
+                  }}
+                >
+                  <DialogContent className="max-w-4xl border-border bg-white p-2 sm:p-3">
+                    <DialogHeader>
+                      <DialogTitle className="text-sm font-medium text-slate-700">
+                        {previewImage?.alt ?? "Image preview"}
+                      </DialogTitle>
+                    </DialogHeader>
+                    {previewImage ? (
+                      <img
+                        src={previewImage.src}
+                        alt={previewImage.alt}
+                        className="max-h-[78vh] w-full rounded-md bg-slate-100 object-contain"
+                      />
+                    ) : null}
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           )}
