@@ -26,22 +26,23 @@ export interface AdminUser {
 export interface Event {
   id: number;
   title: string;
-  description: string;
+  desc: string; // Serializer-də 'desc' olduğu üçün düzəldildi
   type: "online" | "offline" | "hybrid";
   visibility: "public" | "private";
   building?: string;
   floor?: string;
   room?: string;
-  organizer: string;
+  organizer_side: string; // Model-də 'organizer_side' olduğu üçün düzəldildi
   allowed_roles: Role[];
   allowed_roles_ids?: number[];
   start_date: string;
   end_date: string;
   max_participants: number;
   participant_count: number;
-  is_joined?: boolean;
+  is_joined: boolean; // Artıq Backend-dən gəlir, mütləqdir
   images?: EventImage[];
   agenda?: AgendaItem[];
+  created_date?: string;
 }
 
 export interface EventImage {
@@ -52,10 +53,8 @@ export interface EventImage {
 
 export interface AgendaItem {
   id: number;
-  title: string;
-  description: string;
-  start_time: string;
-  end_time: string;
+  time_slot: string; // Serializer-də 'time_slot' adlanır
+  action: string;    // Serializer-də 'action' adlanır
 }
 
 export interface GroupStatistic {

@@ -9,8 +9,13 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.db.models import Q, Count
+from datetime import timedelta
 import random
 import logging
+
+# Required for reminder tasks (Run: pip install django-apscheduler)
+from django_apscheduler.jobstores import DjangoJobStore
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from .models import (
     CustomUser, Role, Event, EventImage, EventAgenda, AllowedParticipant
@@ -19,10 +24,34 @@ from .serializers import (
     RegisterSerializer, VerifyOTPSerializer, LoginSerializer, LogoutSerializer,
     ForgotPasswordSerializer, ResetPasswordSerializer,
     RoleSerializer, AdminUserRoleSerializer, EventSerializer, EventImageSerializer, EventAgendaSerializer,
-    AllowedParticipantSerializer # BU SERIALIZER-İ SERIALIZERS.PY-A ƏLAVƏ ETMƏYİ UNUTMA
+    AllowedParticipantSerializer
 )
 
 logger = logging.getLogger(__name__)
+
+# --- SCHEDULER SETUP ---
+scheduler = BackgroundScheduler()
+scheduler.add_jobstore(DjangoJobStore(), "default")
+if not scheduler.running:
+    scheduler.start()
+
+def send_reminder_email(email, event_title, start_date):
+    """Helper function to send reminder emails."""
+    subject = f"Reminder: {event_title} starts soon!"
+    message = (
+        f"Dear participant,\n\n"
+        f"This is a reminder that the event '{event_title}' will start soon.\n"
+        f"Start Time: {start_date.strftime('%H:%M')}\n\n"
+        f"Best regards!"
+    )
+    try:
+        send_mail(subject, message, None, [email], fail_silently=False)
+        print(f"SUCCESS: Email sent to {email} for event {event_title}")
+    except Exception as e:
+        logger.error(f"Error sending reminder email: {str(e)}")
+        print(f"ERROR: Failed to send email: {str(e)}")
+
+# --- HELPERS ---
 
 def get_tokens(user):
     refresh = RefreshToken.for_user(user)
@@ -45,12 +74,12 @@ class RegisterAPI(GenericAPIView):
             user.otp_created_at = timezone.now()
             user.save()
             try:
-                send_mail("OTP Verification", f"Kod: {user.otp}", None, [user.email], fail_silently=False)
+                send_mail("OTP Verification", f"Code: {user.otp}", None, [user.email], fail_silently=False)
             except Exception:
                 logger.exception("Failed to send OTP email during registration")
                 user.delete()
                 return Response(
-                    {"error": "Could not send OTP email. Please check email server credentials and try again."},
+                    {"error": "Could not send OTP email. Please check server configurations."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
             return Response({"message": "OTP sent", "email": user.email}, status=status.HTTP_201_CREATED)
@@ -80,8 +109,6 @@ class LoginAPI(GenericAPIView):
         if serializer.is_valid():
             username_input = serializer.validated_data["username"].strip()
             password_input = serializer.validated_data["password"]
-
-            # Allow users to sign in with either username or email.
             user = CustomUser.objects.filter(
                 Q(username__iexact=username_input) | Q(email__iexact=username_input)
             ).first()
@@ -91,6 +118,7 @@ class LoginAPI(GenericAPIView):
 
             if not user.is_active:
                 return Response({"error": "Verify OTP"}, status=status.HTTP_403_FORBIDDEN)
+            
             user_info = {
                 "username": user.username,
                 "is_staff": user.is_staff,
@@ -119,23 +147,13 @@ class ForgotPasswordAPI(GenericAPIView):
         if serializer.is_valid():
             try:
                 user = CustomUser.objects.get(email=serializer.validated_data["email"])
+                user.otp = str(random.randint(100000, 999999))
+                user.otp_created_at = timezone.now()
+                user.save()
+                send_mail("Reset OTP", f"Code: {user.otp}", None, [user.email], fail_silently=False)
+                return Response({"message": "OTP sent"})
             except CustomUser.DoesNotExist:
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-            user.otp = str(random.randint(100000, 999999))
-            user.otp_created_at = timezone.now()
-            user.save()
-
-            try:
-                send_mail("Reset OTP", f"Code: {user.otp}", None, [user.email], fail_silently=False)
-            except Exception:
-                logger.exception("Failed to send reset OTP email")
-                return Response(
-                    {"error": "Could not send reset code email. Please try again later."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-
-            return Response({"message": "OTP sent"})
         return Response(serializer.errors, status=400)
 
 class ResetPasswordAPI(GenericAPIView):
@@ -161,7 +179,6 @@ class RoleViewSet(viewsets.ModelViewSet):
     serializer_class = RoleSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
 
-
 class AdminUserRoleViewSet(viewsets.ModelViewSet):
     serializer_class = AdminUserRoleSerializer
     permission_classes = [IsAuthenticated, IsActiveUser, permissions.IsAdminUser]
@@ -171,9 +188,7 @@ class AdminUserRoleViewSet(viewsets.ModelViewSet):
         queryset = CustomUser.objects.prefetch_related('roles').order_by('username')
         search = (self.request.query_params.get('search') or '').strip()
         if search:
-            queryset = queryset.filter(
-                Q(username__icontains=search) | Q(email__icontains=search)
-            )
+            queryset = queryset.filter(Q(username__icontains=search) | Q(email__icontains=search))
         return queryset
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -189,40 +204,20 @@ class EventViewSet(viewsets.ModelViewSet):
         if user.is_staff or user.is_superuser: 
             queryset = Event.objects.all()
         else:
-            # İstifadəçi yalnız öz rol(lar)ına icazə verilən eventləri görməlidir.
-            # Public eventlər: ya rol məhdudiyyəti yoxdur, ya da istifadəçinin rolu uyğundur.
-            # Private eventlər: eyni qayda ilə yalnız uyğun rol olduqda görünür.
             user_role_ids = user.roles.values_list('id', flat=True)
-
             queryset = Event.objects.filter(
                 Q(allowed_roles__isnull=True) | Q(allowed_roles__id__in=user_role_ids)
             ).distinct()
 
-        # Events page filter controls pass query params as: search, type, ordering.
         event_type = self.request.query_params.get('type')
         if event_type in {'online', 'offline', 'hybrid'}:
             queryset = queryset.filter(type=event_type)
 
         search = (self.request.query_params.get('search') or '').strip()
         if search:
-            queryset = queryset.filter(
-                Q(title__icontains=search)
-                | Q(desc__icontains=search)
-                | Q(organizer_side__icontains=search)
-                | Q(building__icontains=search)
-                | Q(room__icontains=search)
-            )
+            queryset = queryset.filter(Q(title__icontains=search) | Q(desc__icontains=search))
 
-        ordering = self.request.query_params.get('ordering', '-start_date')
-        allowed_ordering = {
-            'start_date', '-start_date',
-            'title', '-title',
-            'created_date', '-created_date',
-        }
-        if ordering not in allowed_ordering:
-            ordering = '-start_date'
-
-        return queryset.order_by(ordering)
+        return queryset.order_by(self.request.query_params.get('ordering', '-start_date'))
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -238,39 +233,75 @@ class EventImageViewSet(viewsets.ModelViewSet):
     serializer_class = EventImageSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
 
-# YENİ: İŞTİRAKÇI QEYDİYYATI (JOIN EVENT)
+# --- ALLOWED PARTICIPANT (JOIN/UNJOIN/REMIND) ---
+
 class AllowedParticipantViewSet(viewsets.ModelViewSet):
     queryset = AllowedParticipant.objects.all()
     serializer_class = AllowedParticipantSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
 
     def perform_create(self, serializer):
-        # Tədbiri serializer məlumatından götür
         event = serializer.validated_data.get('event')
         if not event:
             raise ValidationError({"event": "Event is required."})
 
-        # Email təyin et: tələbə üçün sistem özü götürür, staff üçün request-dən
         if self.request.user.is_staff:
             email = self.request.data.get('email')
             if not email:
-                raise ValidationError({"email": "Email daxil etmək tələb olunur."})
+                raise ValidationError({"email": "Email is required for staff entries."})
         else:
             email = self.request.user.email
 
-            # Rol məhdudiyyəti: əgər tədbir üçün allowed_roles təyin olunubsa,
-            # istifadəçinin rolu onlardan biri olmalıdır.
             event_roles = event.allowed_roles.all()
             if event_roles.exists():
                 if not self.request.user.roles.filter(id__in=event_roles.values_list('id', flat=True)).exists():
-                    raise ValidationError({"detail": "Bu tədbir üçün uyğun rolunuz yoxdur."})
+                    raise ValidationError({"detail": "You do not have the required role for this event."})
 
-        # Maksimum iştirakçı limiti
         if event.max_participants is not None and event.allowed_participants.count() >= event.max_participants:
-            raise ValidationError({"detail": "Bu tədbir üçün maksimum iştirakçı sayı dolub."})
+            raise ValidationError({"detail": "Maximum participant limit reached for this event."})
 
-        # Eyni tədbirə təkrar qoşulmağın qarşısını al
         if AllowedParticipant.objects.filter(event=event, email=email).exists():
-            raise ValidationError({"detail": "Artıq bu tədbirə qoşulmusan."})
+            raise ValidationError({"detail": "You are already registered for this event."})
 
-        serializer.save(email=email)
+        instance = serializer.save(email=email)
+
+        # TEST: 2 minutes before start
+        reminder_time = event.start_date - timedelta(minutes=2)
+        
+        print(f"\n--- REMINDER DEBUG ---")
+        print(f"Event: {event.title}")
+        print(f"Start: {event.start_date}")
+        print(f"Reminder Time: {reminder_time}")
+        print(f"Now: {timezone.now()}")
+        print(f"----------------------\n")
+
+        if reminder_time > timezone.now():
+            scheduler.add_job(
+                send_reminder_email,
+                trigger='date',
+                run_date=reminder_time,
+                args=[email, event.title, event.start_date],
+                id=f"reminder_{instance.id}",
+                replace_existing=True
+            )
+
+    @action(detail=False, methods=['post'], url_path='unjoin')
+    def unjoin(self, request):
+        event_id = request.data.get('event')
+        if not event_id:
+            return Response({"error": "Event ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user_email = request.user.email
+        registration = AllowedParticipant.objects.filter(event_id=event_id, email=user_email).first()
+        
+        if registration:
+            job_id = f"reminder_{registration.id}"
+            try:
+                scheduler.remove_job(job_id)
+            except:
+                pass
+            
+            registration.delete()
+            return Response({"message": "Successfully unregistered."}, status=status.HTTP_200_OK)
+        
+        return Response({"error": "Not registered."}, status=status.HTTP_404_NOT_FOUND)

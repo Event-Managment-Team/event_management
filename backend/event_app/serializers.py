@@ -11,9 +11,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('username', 'email', 'phone', 'password')
 
-    def validate_email(self, value):
-        return value
-
     def create(self, validated_data):
         user = CustomUser(
             username=validated_data['username'],
@@ -24,7 +21,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
 
-        # Hər yeni istifadəçiyə standart rol ver (məsələn, Student)
+        # Assign default 'Student' role to new users
         default_role, _ = Role.objects.get_or_create(name='Student')
         user.roles.add(default_role)
 
@@ -53,7 +50,6 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = '__all__'
-
 
 class AdminUserRoleSerializer(serializers.ModelSerializer):
     roles = RoleSerializer(many=True, read_only=True)
@@ -102,16 +98,18 @@ class EventSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_by', 'created_date', 'participant_count']
 
     def get_is_joined(self, obj):
+        """Returns True if the current user is already registered for this event."""
         request = self.context.get('request')
         user = getattr(request, 'user', None)
+        
         if not request or not user or not user.is_authenticated:
             return False
+            
+        # Using the email related to the current user
         return obj.allowed_participants.filter(email=user.email).exists()
-
 
 class AllowedParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = AllowedParticipant
         fields = ['id', 'event', 'email', 'group_name']
-       
         read_only_fields = ['email']

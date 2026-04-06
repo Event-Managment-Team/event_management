@@ -1,12 +1,14 @@
 import api from "./api";
 import type { Event } from "@/types";
 
+// Backend-dən gələn fərqli adlandırılmış sahələri idarə etmək üçün tip
 type BackendEvent = Omit<Event, "description" | "organizer" | "agenda"> & {
   desc?: string;
   organizer_side?: string;
   agendas?: Array<{ time_slot?: string; action?: string }>;
 };
 
+// Backend-dən gələn datayı Frontend formatına çevirən köməkçi funksiya
 const toFrontendEvent = (event: BackendEvent): Event => ({
   ...(event as Event),
   description: event.description ?? event.desc ?? "",
@@ -22,6 +24,7 @@ const toFrontendEvent = (event: BackendEvent): Event => ({
     })),
 });
 
+// Frontend-dən gedən datayı Backend-in gözlədiyi formata çevirən funksiya
 const toBackendPayload = (data: Partial<Event>) => {
   const payload: Record<string, unknown> = { ...data };
 
@@ -50,6 +53,7 @@ const toBackendPayload = (data: Partial<Event>) => {
 };
 
 export const eventService = {
+  // Bütün tədbirləri gətirir
   getAll: async (params?: { search?: string; type?: string; ordering?: string; page?: number }) => {
     const res = await api.get("/events/", { params });
     if (Array.isArray(res.data?.results)) {
@@ -72,6 +76,7 @@ export const eventService = {
     return res;
   },
 
+  // ID-yə görə tək tədbiri gətirir
   getById: async (id: number) => {
     const res = await api.get(`/events/${id}/`);
     return {
@@ -102,8 +107,13 @@ export const eventService = {
   getGroupStatistics: (id: number) =>
     api.get(`/events/${id}/group_statistics/`),
 
+  // Tədbirə qoşulmaq üçün
   joinEvent: (data: { event: number; group_name?: string; email?: string }) =>
     api.post("/allowed-participants/", data),
+
+  // --- YENİ: Tədbirdən çıxmaq funksiyası ---
+  unjoinEvent: (eventId: number) =>
+    api.post("/allowed-participants/unjoin/", { event: eventId }),
 
   uploadImage: (eventId: number, file: File) => {
     const formData = new FormData();
