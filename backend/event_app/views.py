@@ -266,7 +266,7 @@ class AllowedParticipantViewSet(viewsets.ModelViewSet):
         instance = serializer.save(email=email)
 
         # TEST: 2 minutes before start
-        reminder_time = event.start_date - timedelta(minutes=2)
+        reminder_time = event.start_date - timedelta(seconds=15)
         
         print(f"\n--- REMINDER DEBUG ---")
         print(f"Event: {event.title}")
