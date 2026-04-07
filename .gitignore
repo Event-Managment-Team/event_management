@@ -6,6 +6,7 @@ __pycache__/
 
 # Database
 *.sqlite3
+backend/db.sqlite3
 
 # Media uploads
 backend/media/
