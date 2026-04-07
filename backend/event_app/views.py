@@ -35,23 +35,51 @@ scheduler.add_jobstore(DjangoJobStore(), "default")
 if not scheduler.running:
     scheduler.start()
 
-def send_reminder_email(email, event_title, start_date):
-    """Helper function to send reminder emails."""
+# --- MAILING FUNCTION (Detailed & English) ---
+
+def send_reminder_email(email, event_title, start_date, building=None, floor=None, room=None, agenda_items=None):
+    """
+    Sends a professional English reminder email with location and agenda.
+    """
     subject = f"Reminder: {event_title} starts soon!"
+    
+    # Building location logic
+    location_parts = []
+    if building: location_parts.append(f"Building: {building}")
+    if floor: location_parts.append(f"Floor: {floor}")
+    if room: location_parts.append(f"Room/Office: {room}")
+    
+    if location_parts:
+        location_info = "\n📍 Location: " + ", ".join(location_parts)
+    else:
+        location_info = "\n📍 Location: Online / Check event details for link."
+
+    # Agenda formatting logic
+    agenda_text = ""
+    if agenda_items:
+        agenda_text = "\n\n📅 Event Agenda:\n" + "-"*35 + "\n"
+        for item in agenda_items:
+            agenda_text += f"• {item['start_time']} - {item['title']}: {item['desc']}\n"
+        agenda_text += "-"*35
+
     message = (
-        f"Dear participant,\n\n"
-        f"This is a reminder that the event '{event_title}' will start soon.\n"
-        f"Start Time: {start_date.strftime('%H:%M')}\n\n"
-        f"Best regards!"
+        f"Dear Participant,\n\n"
+        f"This is a reminder that the event '{event_title}' you joined is starting in 30 minutes.\n"
+        f"Start Time: {start_date.strftime('%H:%M')}\n"
+        f"{location_info}"
+        f"{agenda_text}\n\n"
+        f"We look forward to your participation!\n"
+        f"Best regards,\nUniEvents Team"
     )
+
     try:
         send_mail(subject, message, None, [email], fail_silently=False)
-        print(f"SUCCESS: Email sent to {email} for event {event_title}")
+        print(f"SUCCESS: Detailed English email sent to {email}")
     except Exception as e:
-        logger.error(f"Error sending reminder email: {str(e)}")
+        logger.error(f"Error sending detailed email: {str(e)}")
         print(f"ERROR: Failed to send email: {str(e)}")
 
-# --- HELPERS ---
+# --- HELPERS & PERMISSIONS ---
 
 def get_tokens(user):
     refresh = RefreshToken.for_user(user)
@@ -61,7 +89,18 @@ class IsActiveUser(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.is_active)
 
-# --- AUTHENTICATION ---
+# --- AUTHENTICATION & USER INFO ---
+
+class UserInfoAPI(GenericAPIView):
+    permission_classes = [IsAuthenticated, IsActiveUser]
+    def get(self, request):
+        user = request.user
+        return Response({
+            "username": user.username,
+            "email": user.email,
+            "is_staff": user.is_staff,
+            "is_superuser": user.is_superuser,
+        })
 
 class RegisterAPI(GenericAPIView):
     permission_classes = [AllowAny]
@@ -79,7 +118,7 @@ class RegisterAPI(GenericAPIView):
                 logger.exception("Failed to send OTP email during registration")
                 user.delete()
                 return Response(
-                    {"error": "Could not send OTP email. Please check server configurations."},
+                    {"error": "Could not send OTP email."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
             return Response({"message": "OTP sent", "email": user.email}, status=status.HTTP_201_CREATED)
@@ -242,48 +281,79 @@ class AllowedParticipantViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         event = serializer.validated_data.get('event')
+        user = self.request.user
         if not event:
             raise ValidationError({"event": "Event is required."})
 
-        if self.request.user.is_staff:
-            email = self.request.data.get('email')
-            if not email:
-                raise ValidationError({"email": "Email is required for staff entries."})
+        # Role & Limit Checks
+        if user.is_staff or user.is_superuser:
+            email = self.request.data.get('email') or user.email
         else:
-            email = self.request.user.email
-
+            email = user.email
             event_roles = event.allowed_roles.all()
             if event_roles.exists():
-                if not self.request.user.roles.filter(id__in=event_roles.values_list('id', flat=True)).exists():
-                    raise ValidationError({"detail": "You do not have the required role for this event."})
+                if not user.roles.filter(id__in=event_roles.values_list('id', flat=True)).exists():
+                    raise ValidationError({"detail": "You do not have the required role."})
 
         if event.max_participants is not None and event.allowed_participants.count() >= event.max_participants:
-            raise ValidationError({"detail": "Maximum participant limit reached for this event."})
+            raise ValidationError({"detail": "Event is full."})
 
         if AllowedParticipant.objects.filter(event=event, email=email).exists():
-            raise ValidationError({"detail": "You are already registered for this event."})
+            raise ValidationError({"detail": "Already registered."})
 
         instance = serializer.save(email=email)
 
-        # TEST: 2 minutes before start
-        reminder_time = event.start_date - timedelta(seconds=15)
-        
-        print(f"\n--- REMINDER DEBUG ---")
-        print(f"Event: {event.title}")
-        print(f"Start: {event.start_date}")
-        print(f"Reminder Time: {reminder_time}")
-        print(f"Now: {timezone.now()}")
-        print(f"----------------------\n")
+        # --- REMINDER LOGIC (Detailed & English) ---
+        print("\n--- DEBUG: JOIN EVENT & SCHEDULING ---")
+        try:
+            # FIX: start_time -> time_slot
+            agenda_qs = event.agendas.all().order_by('time_slot')
+            agenda_list = [
+                {
+                    'title': item.title, 
+                    'start_time': item.time_slot.strftime('%H:%M') if item.time_slot else "N/A", 
+                    'desc': getattr(item, 'desc', '') or ''
+                } for item in agenda_qs
+            ]
 
-        if reminder_time > timezone.now():
-            scheduler.add_job(
-                send_reminder_email,
-                trigger='date',
-                run_date=reminder_time,
-                args=[email, event.title, event.start_date],
-                id=f"reminder_{instance.id}",
-                replace_existing=True
-            )
+            reminder_time = event.start_date - timedelta(minutes=30)
+            now = timezone.now()
+
+            print(f"Target Reminder: {reminder_time}")
+
+            if reminder_time > now:
+                scheduler.add_job(
+                    send_reminder_email,
+                    trigger='date',
+                    run_date=reminder_time,
+                    args=[
+                        email, event.title, event.start_date,
+                        getattr(event, 'building', ""),
+                        getattr(event, 'floor', ""),
+                        getattr(event, 'room', ""),
+                        agenda_list
+                    ],
+                    id=f"reminder_{instance.id}",
+                    replace_existing=True
+                )
+                print(f"SUCCESS: Reminder scheduled for {reminder_time}")
+            else:
+                # Urgent testing: send after 10 seconds if event is too soon
+                test_run = now + timedelta(seconds=10)
+                scheduler.add_job(
+                    send_reminder_email,
+                    trigger='date',
+                    run_date=test_run,
+                    args=[email, event.title, event.start_date, getattr(event, 'building', ""), 
+                          getattr(event, 'floor', ""), getattr(event, 'room', ""), agenda_list],
+                    id=f"urgent_{instance.id}"
+                )
+                print("NOTICE: Event starts soon. Urgent reminder in 10s.")
+
+        except Exception as e:
+            logger.error(f"Scheduler failed: {str(e)}")
+            print(f"DEBUG ERROR: {str(e)}")
+        print("--- DEBUG END ---\n")
 
     @action(detail=False, methods=['post'], url_path='unjoin')
     def unjoin(self, request):
@@ -298,9 +368,7 @@ class AllowedParticipantViewSet(viewsets.ModelViewSet):
             job_id = f"reminder_{registration.id}"
             try:
                 scheduler.remove_job(job_id)
-            except:
-                pass
-            
+            except: pass
             registration.delete()
             return Response({"message": "Successfully unregistered."}, status=status.HTTP_200_OK)
         

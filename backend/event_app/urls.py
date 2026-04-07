@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     RegisterAPI, VerifyOTPAPI, LoginAPI, LogoutAPI,
     ForgotPasswordAPI, ResetPasswordAPI,
+    UserInfoAPI,  
     RoleViewSet, AdminUserRoleViewSet, EventViewSet, EventImageViewSet,
     AllowedParticipantViewSet  
 )
@@ -21,5 +22,9 @@ urlpatterns = [
     path('api/logout/', LogoutAPI.as_view(), name='api_logout'),
     path('api/forgot-password/', ForgotPasswordAPI.as_view(), name='api_forgot_password'),
     path('api/reset-password/', ResetPasswordAPI.as_view(), name='api_reset_password'),
+    
+  
+    path('api/profile/', UserInfoAPI.as_view(), name='api_profile'),
+    
     path('api/', include(router.urls)),
 ]
